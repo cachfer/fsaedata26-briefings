@@ -248,7 +248,6 @@ def _admin_panel():
 
         st.session_state.briefing_data = {**teste, "validacoes": validacoes}
         st.session_state.membros_raw = membros
-        # Reset das etapas dependentes
         st.session_state.membros_editados = None
         st.session_state.cronograma_editado = None
         st.session_state.secoes_geradas = None
@@ -257,6 +256,31 @@ def _admin_panel():
             f"{len(membros)} membros confirmados, {len(validacoes)} validações."
         )
         st.rerun()
+
+    # Debug temporário — mostra campos brutos do Notion
+    if st.checkbox("🔍 Debug: ver campos brutos do formulário de comparecimento"):
+        from services.notion_service import debug_db_properties, _get_comparecimento_db_id
+        db_id = _get_comparecimento_db_id(
+            st.session_state.briefing_data["local"] if st.session_state.get("briefing_data") else "RBC",
+            data_escolhida
+        )
+        if db_id:
+            try:
+                props = debug_db_properties(db_id)
+                st.json(props)
+                # Mostra também os valores brutos do primeiro membro
+                from services.notion_service import notion
+                results = notion.databases.query(database_id=db_id, page_size=1)["results"]
+                if results:
+                    st.write("**Valores brutos do primeiro registro:**")
+                    st.json({k: v for k, v in results[0]["properties"].items()
+                             if k in ["Subgrupo", "Você vai com o seu carro?",
+                                      "Que horas você pretende chegar?",
+                                      "Que horas você pretende sair?", "Nome"]})
+            except Exception as e:
+                st.error(f"Erro no debug: {e}")
+        else:
+            st.warning("Database ID não encontrado para este local/dia.")
 
     if not st.session_state.get("briefing_data"):
         return
