@@ -285,11 +285,11 @@ def _admin_panel():
     st.divider()
     st.markdown("### 3. Pilotos")
     membros_raw = st.session_state.membros_raw
-    nomes = [m["nome"] for m in membros_raw]
+    PILOTOS_FIXOS = ["João Gabriel", "Gustavo Fornazier", "Milione", "Juan", "Raphael"]
     bd["pilotos"] = st.multiselect(
         "Selecione os pilotos do dia",
-        options=nomes,
-        default=bd.get("pilotos", []),
+        options=PILOTOS_FIXOS,
+        default=[p for p in bd.get("pilotos", []) if p in PILOTOS_FIXOS],
     )
 
     # ── 4. Divisão de tarefas ────────────────────────────────────────────────
