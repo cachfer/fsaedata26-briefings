@@ -118,11 +118,22 @@ def suggest_task_allocation(
     circuito: str,
 ) -> list[dict]:
 
+    def _match_piloto(nome: str, pilotos: list[str]) -> bool:
+        n = nome.lower()
+        for p in pilotos:
+            p_lower = p.lower()
+            if p_lower in n or n in p_lower:
+                return True
+            for palavra in p_lower.split():
+                if len(palavra) > 3 and palavra in n:
+                    return True
+        return False
+
     membros_str = "\n".join(
         f"- {m['nome']} ({m['subgrupo']})"
         + (f", chega {m['chegada']}" if m.get("chegada") else "")
         + (f", sai {m['saida']}" if m.get("saida") else "")
-        + (" [PILOTO DESIGNADO]" if m["nome"] in pilotos_escolhidos else "")
+        + (" [PILOTO DESIGNADO]" if _match_piloto(m["nome"], pilotos_escolhidos) else "")
         for m in membros
     )
 

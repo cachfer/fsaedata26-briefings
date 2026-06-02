@@ -248,7 +248,6 @@ def _admin_panel():
 
         st.session_state.briefing_data = {**teste, "validacoes": validacoes}
         st.session_state.membros_raw = membros
-        # Reset das etapas dependentes
         st.session_state.membros_editados = None
         st.session_state.cronograma_editado = None
         st.session_state.secoes_geradas = None
@@ -257,6 +256,31 @@ def _admin_panel():
             f"{len(membros)} membros confirmados, {len(validacoes)} validações."
         )
         st.rerun()
+
+    # Debug temporário — mostra campos brutos do Notion
+    if st.checkbox("🔍 Debug: ver campos brutos do formulário de comparecimento"):
+        from services.notion_service import debug_db_properties, _get_comparecimento_db_id
+        db_id = _get_comparecimento_db_id(
+            st.session_state.briefing_data["local"] if st.session_state.get("briefing_data") else "RBC",
+            data_escolhida
+        )
+        if db_id:
+            try:
+                props = debug_db_properties(db_id)
+                st.json(props)
+                # Mostra também os valores brutos do primeiro membro
+                from services.notion_service import notion
+                results = notion.databases.query(database_id=db_id, page_size=1)["results"]
+                if results:
+                    st.write("**Valores brutos do primeiro registro:**")
+                    st.json({k: v for k, v in results[0]["properties"].items()
+                             if k in ["Subgrupo", "Você vai com o seu carro?",
+                                      "Que horas você pretende chegar?",
+                                      "Que horas você pretende sair?", "Nome"]})
+            except Exception as e:
+                st.error(f"Erro no debug: {e}")
+        else:
+            st.warning("Database ID não encontrado para este local/dia.")
 
     if not st.session_state.get("briefing_data"):
         return
@@ -338,6 +362,19 @@ def _admin_panel():
         key="membros_editor",
     )
 
+    def _is_piloto(nome_membro: str, pilotos: list[str]) -> bool:
+        """Verifica se um membro é piloto por correspondência parcial de nome."""
+        nome_lower = nome_membro.lower()
+        for p in pilotos:
+            p_lower = p.lower()
+            if p_lower in nome_lower or nome_lower in p_lower:
+                return True
+            # Verifica se alguma palavra do nome do piloto está no nome do membro
+            for palavra in p_lower.split():
+                if len(palavra) > 3 and palavra in nome_lower:
+                    return True
+        return False
+
     # Sincroniza edições
     st.session_state.membros_editados = [
         {
@@ -348,7 +385,7 @@ def _admin_panel():
             "tarefa_pista": row["Tarefa Pista"],
             "chegada": row["Chegada"],
             "saida": row["Saída"],
-            "piloto": row["Nome"] in bd.get("pilotos", []),
+            "piloto": _is_piloto(row["Nome"], bd.get("pilotos", [])),
         }
         for _, row in edited_df.iterrows()
     ]
