@@ -143,7 +143,6 @@ REGRAS:
 6. Membros com chegada tardia podem ficar sem tarefa de box
 7. Membros que nao estao em Supervisao nem Warm Up devem ser distribuidos entre as montagens (Montagem A, B, C, D)
 8. "Feedback de piloto" e sempre tarefa de PISTA (tarefa_pista), nunca de box
-9. Inclua o campo "subgrupo" e os campos "chegada" e "saida" exatamente como recebidos nos dados dos membros
 
 LOCAL: {local}
 CIRCUITO: {circuito}
@@ -158,7 +157,7 @@ EXEMPLOS:
 {FEW_SHOT_ALOCACAO}
 
 Responda APENAS com JSON valido, sem texto, sem markdown, sem backticks.
-Formato: {{"alocacao": [{{"nome": "Nome", "subgrupo": "Subgrupo", "tarefa_box": "tarefa", "tarefa_pista": "tarefa", "piloto": false, "chegada": "horario ou vazio", "saida": "horario ou vazio"}}]}}"""
+Formato: {{"alocacao": [{{"nome": "Nome", "tarefa_box": "tarefa", "tarefa_pista": "tarefa", "piloto": false}}]}}"""
 
     try:
         raw = _chat(prompt)
@@ -168,16 +167,10 @@ Formato: {{"alocacao": [{{"nome": "Nome", "subgrupo": "Subgrupo", "tarefa_box": 
         for m in membros:
             if m["nome"] in alocacao_map:
                 a = alocacao_map[m["nome"]]
+                # Só atualiza tarefas — subgrupo, chegada e saída vêm do Notion
                 m["tarefa_box"] = a.get("tarefa_box", "")
                 m["tarefa_pista"] = a.get("tarefa_pista", "")
                 m["piloto"] = a.get("piloto", False)
-                # Preserva subgrupo/chegada/saída do Notion se a IA não trouxer
-                if a.get("subgrupo"):
-                    m["subgrupo"] = a["subgrupo"]
-                if a.get("chegada"):
-                    m["chegada"] = a["chegada"]
-                if a.get("saida"):
-                    m["saida"] = a["saida"]
     except Exception as e:
         raise RuntimeError(f"Erro na sugestão de alocação: {e}") from e
 
