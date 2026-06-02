@@ -1,49 +1,31 @@
 """
 utils/renderer.py
-Renderiza o template HTML do briefing e gera PDF via WeasyPrint.
+Renderiza o template HTML do briefing.
+O PDF é gerado pelo próprio navegador via window.print() — sem dependências de sistema.
 """
 
 import base64
-import os
 from pathlib import Path
 from datetime import date
 from jinja2 import Environment, FileSystemLoader
 
 TEMPLATE_DIR = Path(__file__).parent.parent / "components"
+
 LOCALE_MESES = {
     1: "janeiro", 2: "fevereiro", 3: "março", 4: "abril",
     5: "maio", 6: "junho", 7: "julho", 8: "agosto",
-    9: "setembro", 10: "outubro", 11: "novembro", 12: "dezembro"
+    9: "setembro", 10: "outubro", 11: "novembro", 12: "dezembro",
 }
 
 
-def _data_formatada(d: date) -> str:
-    return f"{d.day} de {LOCALE_MESES[d.month]} de {d.year}"
+def _data_formatada(d) -> str:
+    if isinstance(d, date):
+        return f"{d.day} de {LOCALE_MESES[d.month]} de {d.year}"
+    return str(d)
 
 
 def _enumerate_filter(iterable):
     return enumerate(iterable)
-
-
-def _subgrupo_css(subgrupo: str) -> str:
-    mapa = {
-        "capitania": "capitania",
-        "motor": "motor",
-        "dinâmica": "dinamica",
-        "dinamica": "dinamica",
-        "eletrônica": "eletronica",
-        "eletronica": "eletronica",
-        "freio": "freio",
-        "aerodinâmica": "aerodinamica",
-        "aerodinamica": "aerodinamica",
-        "chassi": "chassi",
-        "transmissão": "transmissao",
-        "transmissao": "transmissao",
-        "comunicação": "comunicacao",
-        "comunicacao": "comunicacao",
-        "calouro": "calouro",
-    }
-    return mapa.get(subgrupo.lower().strip(), "calouro")
 
 
 def render_html(briefing_data: dict) -> str:
@@ -54,7 +36,7 @@ def render_html(briefing_data: dict) -> str:
 
     template = env.get_template("briefing_template.html")
 
-    # Processa os passos do procedimento (divide por linha ou por ponto)
+    # Processa passos do procedimento
     procedimento_raw = briefing_data.get("procedimento", "")
     procedimento_passos = [
         p.strip().lstrip("0123456789.-) ")
@@ -62,7 +44,7 @@ def render_html(briefing_data: dict) -> str:
         if p.strip() and len(p.strip()) > 3
     ]
 
-    # Imagens de traçado: converte bytes para base64 para embutir no HTML
+    # Converte imagens de traçado para base64
     tracados_html = []
     for t in briefing_data.get("tracados", []):
         if t.get("bytes"):
@@ -82,7 +64,7 @@ def render_html(briefing_data: dict) -> str:
     ctx = {
         "numero": str(briefing_data.get("numero", "??")).zfill(2),
         "local": briefing_data.get("local", ""),
-        "data_formatada": _data_formatada(briefing_data["data"]) if isinstance(briefing_data.get("data"), date) else briefing_data.get("data", ""),
+        "data_formatada": _data_formatada(briefing_data.get("data", "")),
         "pilotos": briefing_data.get("pilotos", []),
         "responsavel": briefing_data.get("responsavel", "Carolina Ferrari"),
         "objetivos_capa": briefing_data.get("objetivos_capa", ""),
@@ -103,13 +85,17 @@ def render_html(briefing_data: dict) -> str:
 
 
 def render_pdf(briefing_data: dict) -> bytes:
-    """Gera o PDF do briefing a partir do HTML renderizado."""
-    try:
-        from weasyprint import HTML, CSS
-        html_content = render_html(briefing_data)
-        pdf_bytes = HTML(string=html_content).write_pdf()
-        return pdf_bytes
-    except ImportError:
-        raise RuntimeError(
-            "WeasyPrint não instalado. Execute: pip install weasyprint"
-        )
+    """
+    Retorna o HTML como bytes para download.
+    O usuário abre no navegador e usa Ctrl+P → Salvar como PDF.
+    """
+    html = render_html(briefing_data)
+    return html.encode("utf-8")
+
+
+def get_pdf_mimetype() -> str:
+    return "text/html"
+
+
+def get_pdf_extension() -> str:
+    return "html"

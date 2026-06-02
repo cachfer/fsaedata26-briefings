@@ -106,15 +106,15 @@ def _show_public_briefing(file_id: str):
 
     col1, col2, col3 = st.columns([3, 1, 3])
     with col2:
-        if st.button("⬇ Exportar PDF", type="primary"):
-            with st.spinner("Gerando PDF..."):
-                pdf = render_pdf(data)
+        if st.button("⬇ Exportar para impressão", type="primary"):
+            with st.spinner("Gerando arquivo..."):
+                html = render_pdf(data)
             num = str(data.get("numero", "XX")).zfill(2)
             st.download_button(
-                label="📄 Baixar PDF",
-                data=pdf,
-                file_name=f"briefing_T{num}_{data.get('data', '')}.pdf",
-                mime="application/pdf",
+                label="📄 Baixar HTML (abra e imprima como PDF)",
+                data=html,
+                file_name=f"briefing_T{num}_{data.get('data', '')}.html",
+                mime="text/html",
             )
 
 
@@ -519,14 +519,14 @@ def _admin_panel():
 
             # PDF imediato
             from utils.renderer import render_pdf
-            with st.spinner("Gerando PDF..."):
-                pdf = render_pdf(full)
+            with st.spinner("Gerando arquivo..."):
+                html_bytes = render_pdf(full)
             num = str(full.get("numero", "XX")).zfill(2)
             st.download_button(
-                label="⬇ Baixar PDF",
-                data=pdf,
-                file_name=f"briefing_T{num}_{data_escolhida}.pdf",
-                mime="application/pdf",
+                label="⬇ Baixar HTML (abra e imprima como PDF)",
+                data=html_bytes,
+                file_name=f"briefing_T{num}_{data_escolhida}.html",
+                mime="text/html",
             )
 
 
