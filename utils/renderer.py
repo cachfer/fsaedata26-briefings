@@ -86,16 +86,21 @@ def render_html(briefing_data: dict) -> str:
 
 def render_pdf(briefing_data: dict) -> bytes:
     """
-    Retorna o HTML como bytes para download.
-    O usuário abre no navegador e usa Ctrl+P → Salvar como PDF.
+    Retorna um PDF real quando o motor WeasyPrint estiver disponível.
+    Faz fallback para HTML bytes se a geração de PDF falhar.
     """
     html = render_html(briefing_data)
-    return html.encode("utf-8")
+    try:
+        from weasyprint import HTML
+
+        return HTML(string=html, base_url=str(TEMPLATE_DIR)).write_pdf()
+    except Exception:
+        return html.encode("utf-8")
 
 
 def get_pdf_mimetype() -> str:
-    return "text/html"
+    return "application/pdf"
 
 
 def get_pdf_extension() -> str:
-    return "html"
+    return "pdf"

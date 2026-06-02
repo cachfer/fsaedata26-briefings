@@ -191,7 +191,7 @@ def _admin_panel():
         get_test_dates, get_test_by_date,
         get_validacoes_do_teste, get_membros_confirmados,
     )
-    from services.drive_service import list_tracados, download_tracado, save_briefing
+    from services.drive_service import list_tracados, download_tracado
     from services.ai_service import suggest_task_allocation, generate_briefing_sections, generate_schedule
 
     st.markdown("# 🏎 Fórmula SAE UFMG — Briefing Generator")
@@ -566,34 +566,39 @@ def _admin_panel():
     with col_pub:
         if st.button("🚀 Publicar briefing", type="primary", use_container_width=True):
             full = _build_full_briefing()
-            full["publicado_em"] = datetime.now().isoformat()
-
-            with st.spinner("Salvando no Drive..."):
-                try:
-                    file_id = save_briefing(full)
-                except Exception as e:
-                    st.error(f"Erro ao publicar briefing: {e}")
-                    st.stop()
-
-            app_url = _get_secret("APP_URL", "http://localhost:8501")
-            link_publico = f"{app_url}?b={file_id}"
-
-            st.success("✅ Briefing publicado!")
-            st.markdown("**Link para compartilhar:**")
-            st.code(link_publico)
-            st.markdown(f"[Abrir briefing ↗]({link_publico})")
-
-            # PDF imediato
-            from utils.renderer import render_pdf
-            with st.spinner("Gerando arquivo..."):
-                html_bytes = render_pdf(full)
+            from utils.renderer import render_html, render_pdf
             num = str(full.get("numero", "XX")).zfill(2)
+
+            with st.spinner("Gerando PDF local..."):
+                pdf_bytes = render_pdf(full)
+                html_text = render_html(full)
+
+            st.success("Briefing gerado localmente.")
+            st.markdown("Baixe o PDF abaixo, faça upload manual no Drive e compartilhe o link do arquivo no grupo.")
             st.download_button(
-                label="⬇ Baixar HTML (abra e imprima como PDF)",
-                data=html_bytes,
+                label="⬇ Baixar PDF do briefing",
+                data=pdf_bytes,
+                file_name=f"briefing_T{num}_{data_escolhida}.pdf",
+                mime="application/pdf",
+            )
+
+            st.download_button(
+                label="⬇ Baixar HTML do briefing",
+                data=html_text.encode("utf-8"),
                 file_name=f"briefing_T{num}_{data_escolhida}.html",
                 mime="text/html",
             )
+
+            manual_link = st.text_input(
+                "Link do Drive após upload manual",
+                value=st.session_state.get("manual_drive_link", ""),
+                placeholder="Cole aqui o link do arquivo no Drive",
+            )
+            if manual_link:
+                st.session_state.manual_drive_link = manual_link
+                st.markdown("**Link para compartilhar no grupo:**")
+                st.code(manual_link)
+                st.markdown(f"[Abrir briefing ↗]({manual_link})")
 
 
 # ════════════════════════════════════════════════════════════════════════════
