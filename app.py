@@ -298,16 +298,19 @@ def _admin_panel():
 
     if st.button("🤖 Gerar sugestão de alocação com IA"):
         with st.spinner("A IA está alocando tarefas..."):
-            membros_alocados = suggest_task_allocation(
-                membros=[m.copy() for m in membros_raw],
-                validacoes=validacoes,
-                pilotos_escolhidos=bd["pilotos"],
-                local=bd["local"],
-                circuito=bd["circuito"],
-            )
-        st.session_state.membros_editados = membros_alocados
-        st.success("Sugestão gerada! Edite a tabela abaixo conforme necessário.")
-        st.rerun()
+            try:
+                membros_alocados = suggest_task_allocation(
+                    membros=[m.copy() for m in membros_raw],
+                    validacoes=validacoes,
+                    pilotos_escolhidos=bd["pilotos"],
+                    local=bd["local"],
+                    circuito=bd["circuito"],
+                )
+                st.session_state.membros_editados = membros_alocados
+                st.success("Sugestão gerada! Edite a tabela abaixo conforme necessário.")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erro na IA de alocação: {e}")
 
     if st.session_state.membros_editados is None:
         st.session_state.membros_editados = [m.copy() for m in membros_raw]
@@ -377,9 +380,12 @@ def _admin_panel():
 
     if st.button("✍️ Gerar seções com IA (objetivos / revisão teórica / procedimento)"):
         with st.spinner("Gerando conteúdo com IA..."):
-            secoes = generate_briefing_sections(validacoes)
-        st.session_state.secoes_geradas = secoes
-        st.rerun()
+            try:
+                secoes = generate_briefing_sections(validacoes)
+                st.session_state.secoes_geradas = secoes
+                st.rerun()
+            except Exception as e:
+                st.error(f"Erro na IA de seções: {e}")
 
     s = st.session_state.secoes_geradas or {}
     bd["o_que_buscamos"] = st.text_area(
@@ -461,24 +467,15 @@ def _admin_panel():
     )
     bd["setores_lista"] = [l.strip() for l in setores_texto.split("\n") if l.strip()]
 
-    # ── 8. Links úteis ───────────────────────────────────────────────────────
-    st.divider()
-    st.markdown("### 8. Links úteis")
-    st.caption("Links fixos da temporada — pré-preenchidos dos secrets. Edite se necessário.")
 
-    links_saved = bd.get("links", {})
-    col1, col2 = st.columns(2)
-    with col1:
-        pasta_logs  = st.text_input("Pasta de Logs",          value=links_saved.get("pasta_logs",  _get_secret("LINK_PASTA_LOGS")))
-        fmea        = st.text_input("Formulário FMEA",         value=links_saved.get("fmea",         _get_secret("LINK_FMEA")))
-        feedback    = st.text_input("Formulário Feedback",     value=links_saved.get("feedback",     _get_secret("LINK_FEEDBACK")))
-    with col2:
-        tempo_volta = st.text_input("Planilha Tempo de Volta", value=links_saved.get("tempo_volta",  _get_secret("LINK_TEMPO_VOLTA")))
-        grupo_tempo = st.text_input("Grupo de Tempo",          value=links_saved.get("grupo_tempo",  _get_secret("LINK_GRUPO_TEMPO")))
-        grupo_cone  = st.text_input("Grupo de Cone",           value=links_saved.get("grupo_cone",   _get_secret("LINK_GRUPO_CONE")))
+    # ── 8. Links úteis (fixos — configurados nos secrets) ────────────────────
     bd["links"] = {
-        "pasta_logs": pasta_logs, "fmea": fmea, "feedback": feedback,
-        "tempo_volta": tempo_volta, "grupo_tempo": grupo_tempo, "grupo_cone": grupo_cone,
+        "pasta_logs": _get_secret("LINK_PASTA_LOGS"),
+        "fmea":        _get_secret("LINK_FMEA"),
+        "feedback":    _get_secret("LINK_FEEDBACK"),
+        "tempo_volta": _get_secret("LINK_TEMPO_VOLTA"),
+        "grupo_tempo": _get_secret("LINK_GRUPO_TEMPO"),
+        "grupo_cone":  _get_secret("LINK_GRUPO_CONE"),
     }
 
     # ── 9. Publicar ──────────────────────────────────────────────────────────
