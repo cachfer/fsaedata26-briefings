@@ -250,12 +250,22 @@ def _admin_panel():
 
     if st.button("📥 Carregar dados do Notion", type="primary"):
         with st.spinner("Carregando dados..."):
-            teste = get_test_by_date(data_escolhida)
-            if not teste:
-                st.error("Teste não encontrado para esta data no Notion.")
-                return
-            validacoes = get_validacoes_do_teste(teste["validacao_ids"])
-            membros = get_membros_confirmados(teste["local"], data_escolhida)
+            try:
+                st.caption("1/3 Buscando teste selecionado no Notion...")
+                teste = get_test_by_date(data_escolhida)
+                if not teste:
+                    st.error("Teste não encontrado para esta data no Notion.")
+                    st.stop()
+
+                st.caption("2/3 Carregando validações da metodologia...")
+                validacoes = get_validacoes_do_teste(teste.get("validacao_ids", []))
+
+                st.caption("3/3 Carregando membros confirmados...")
+                membros = get_membros_confirmados(teste.get("local", ""), data_escolhida)
+            except Exception as e:
+                st.error(f"Erro ao carregar dados do Notion: {e}")
+                st.info("Se isso acontece para todo mundo, confira o token do Notion, os IDs dos databases e o nome das colunas usadas nas queries.")
+                st.stop()
 
         st.session_state.briefing_data = {**teste, "validacoes": validacoes}
         st.session_state.membros_raw = membros
