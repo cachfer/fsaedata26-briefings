@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Briefing T{{ numero | zfill(2) }} — Fórmula UFMG</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --preto: #0a0a0a;
+    --cinza-escuro: #111111;
+    --cinza-medio: #1a1a1a;
+    --cinza-claro: #2a2a2a;
+    --borda: #333333;
+    --branco: #ffffff;
+    --branco-70: rgba(255,255,255,0.7);
+    --branco-40: rgba(255,255,255,0.4);
+    --vermelho: #cc0000;
+    --azul: #1a3a8f;
+    --azul-claro: #2a4fa0;
+    --accent: #0066ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--preto);
+    color: var(--branco);
+    font-family: 'Barlow', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ── NAVEGAÇÃO ── */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,10,10,0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--borda);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    height: 52px;
+  }
+  .nav-logo {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    letter-spacing: 0.05em;
+    color: var(--branco);
+    text-transform: uppercase;
+  }
+  .nav-logo span { color: var(--vermelho); }
+  .nav-links {
+    display: flex;
+    gap: 1.5rem;
+    list-style: none;
+  }
+  .nav-links a {
+    color: var(--branco-70);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--branco); }
+
+  /* ── CAPA ── */
+  .capa {
+    position: relative;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: hidden;
+  }
+  .capa-esquerda {
+    background: var(--preto);
+    padding: 4rem 3rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    z-index: 2;
+  }
+  .capa-direita {
+    position: relative;
+    overflow: hidden;
+  }
+  .capa-direita img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(100%) contrast(1.1);
+    opacity: 0.85;
+  }
+  .capa-direita::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to right, var(--preto) 0%, transparent 30%);
+  }
+
+  .numero-teste {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: clamp(7rem, 15vw, 12rem);
+    line-height: 0.85;
+    color: var(--branco);
+    letter-spacing: -0.02em;
+  }
+  .numero-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.2em;
+    color: var(--branco-70);
+    text-transform: uppercase;
+    margin-top: 0.5rem;
+  }
+
+  .info-table {
+    border: 1px solid var(--azul);
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 380px;
+    margin-top: 2rem;
+  }
+  .info-table td {
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--borda);
+    font-size: 0.9rem;
+  }
+  .info-table td:first-child {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--branco);
+    white-space: nowrap;
+    width: 40%;
+  }
+  .info-table td:last-child {
+    color: var(--branco-70);
+  }
+  .info-table tr:last-child td { border-bottom: none; }
+
+  .objetivos-block {
+    margin-top: 2rem;
+  }
+  .objetivos-label {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--branco);
+  }
+  .objetivos-text {
+    color: var(--branco-70);
+    font-size: 0.9rem;
+    margin-top: 0.4rem;
+  }
+
+  .capa-footer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .capa-footer-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .bar-vermelho {
+    height: 4px;
+    width: 120px;
+    background: var(--vermelho);
+  }
+  .bar-azul {
+    height: 4px;
+    width: 80px;
+    background: var(--azul);
+  }
+  .capa-footer-text {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--branco-70);
+  }
+  .capa-footer-text .team {
+    font-size: 1rem;
+    color: var(--branco);
+    display: block;
+  }
+
+  /* ── SEÇÕES GERAIS ── */
+  .section {
+    padding: 4rem 3rem;
+    border-bottom: 1px solid var(--borda);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .section-full {
+    padding: 4rem 3rem;
+    border-bottom: 1px solid var(--borda);
+  }
+  .section-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 2.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--borda);
+  }
+  .section-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: clamp(1.8rem, 4vw, 2.4rem);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+  .section-subtitle {
+    font-size: 0.75rem;
+    color: var(--branco-40);
+    letter-spacing: 0.05em;
+    margin-top: 0.3rem;
+  }
+  .section-numero {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: 2rem;
+    color: var(--branco-40);
+    letter-spacing: 0.05em;
+  }
+  .section-acento {
+    height: 3px;
+    width: 40px;
+    background: var(--vermelho);
+    margin-bottom: 0.5rem;
+  }
+
+  /* ── TEXTO DE SEÇÃO ── */
+  .section-body {
+    color: var(--branco-70);
+    line-height: 1.8;
+    max-width: 800px;
+  }
+  .section-body p { margin-bottom: 1rem; }
+  .section-body p:last-child { margin-bottom: 0; }
+  .section-body strong { color: var(--branco); }
+
+  .kpi-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+  }
+  .kpi-tag {
+    background: var(--cinza-claro);
+    border: 1px solid var(--borda);
+    padding: 0.3rem 0.8rem;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--branco-70);
+  }
+
+  /* ── CRONOGRAMA ── */
+  .cronograma-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+  .cronograma-table thead tr {
+    background: var(--azul);
+  }
+  .cronograma-table thead th {
+    padding: 0.8rem 1.2rem;
+    text-align: left;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 0.8rem;
+  }
+  .cronograma-table tbody tr {
+    border-bottom: 1px solid var(--borda);
+    transition: background 0.15s;
+  }
+  .cronograma-table tbody tr:hover {
+    background: var(--cinza-medio);
+  }
+  .cronograma-table tbody td {
+    padding: 0.75rem 1.2rem;
+    color: var(--branco-70);
+  }
+  .cronograma-table tbody td:first-child {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--branco);
+    font-size: 0.9rem;
+  }
+  .cronograma-table tbody td:nth-child(2) {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    color: var(--branco);
+  }
+
+  /* ── DIVISÃO DE TAREFAS ── */
+  .tarefas-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  .tarefas-table thead tr {
+    background: var(--cinza-claro);
+    border-bottom: 2px solid var(--borda);
+  }
+  .tarefas-table thead th {
+    padding: 0.8rem 1rem;
+    text-align: left;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    color: var(--branco-70);
+  }
+  .tarefas-table tbody tr {
+    border-bottom: 1px solid var(--borda);
+    transition: background 0.15s;
+  }
+  .tarefas-table tbody tr:hover { background: var(--cinza-medio); }
+  .tarefas-table tbody td {
+    padding: 0.7rem 1rem;
+    color: var(--branco-70);
+  }
+  .tarefas-table tbody td:first-child {
+    font-weight: 600;
+    color: var(--branco);
+  }
+  .tag {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 3px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .tag-capitania  { background: #4a3060; color: #c49cec; }
+  .tag-motor      { background: #2a3060; color: #7898ec; }
+  .tag-dinamica   { background: #1a4030; color: #4ecb8a; }
+  .tag-eletronica { background: #3a4020; color: #b8cc50; }
+  .tag-freio      { background: #402020; color: #ec7878; }
+  .tag-aerodinamica { background: #20304a; color: #78b8ec; }
+  .tag-chassi     { background: #3a3020; color: #ecca78; }
+  .tag-transmissao { background: #2a2a40; color: #9898ec; }
+  .tag-comunicacao { background: #203030; color: #78ecec; }
+  .tag-calouro    { background: #202020; color: #aaaaaa; }
+  .tag-sim        { background: #1a3a20; color: #4ecb70; }
+  .tag-nao        { background: #3a1a1a; color: #ec5050; }
+
+  /* ── PROCEDIMENTO ── */
+  .procedimento-list {
+    list-style: none;
+    counter-reset: proc;
+  }
+  .procedimento-list li {
+    counter-increment: proc;
+    display: flex;
+    gap: 1.2rem;
+    margin-bottom: 1.2rem;
+    color: var(--branco-70);
+    line-height: 1.7;
+  }
+  .procedimento-list li::before {
+    content: counter(proc);
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    background: var(--azul);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--branco);
+    margin-top: 2px;
+  }
+
+  /* ── TRAÇADO ── */
+  .tracado-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+  }
+  .tracado-card {
+    background: var(--cinza-medio);
+    border: 1px solid var(--borda);
+    overflow: hidden;
+  }
+  .tracado-card-header {
+    padding: 0.8rem 1.2rem;
+    background: var(--cinza-claro);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--branco-70);
+  }
+  .tracado-card img {
+    width: 100%;
+    display: block;
+  }
+
+  /* ── SETORES ── */
+  .setores-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+  .setor-item {
+    background: var(--cinza-medio);
+    border-left: 3px solid var(--azul);
+    padding: 0.8rem 1rem;
+  }
+  .setor-num {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--branco);
+  }
+  .setor-desc {
+    font-size: 0.85rem;
+    color: var(--branco-70);
+    margin-top: 0.2rem;
+  }
+
+  /* ── LINKS ÚTEIS ── */
+  .links-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+  .link-card {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 1rem 1.2rem;
+    border: 1px solid var(--borda);
+    background: var(--cinza-medio);
+    text-decoration: none;
+    color: var(--branco);
+    transition: all 0.2s;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .link-card:hover {
+    background: var(--cinza-claro);
+    border-color: var(--accent);
+    color: var(--branco);
+  }
+  .link-card-icon {
+    font-size: 1.3rem;
+    flex-shrink: 0;
+  }
+  .link-card.drive { border-left: 3px solid #fbbc04; }
+  .link-card.form  { border-left: 3px solid var(--vermelho); }
+  .link-card.whats { border-left: 3px solid #25D366; }
+
+  .aviso-fmea {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: var(--cinza-medio);
+    border-left: 4px solid var(--vermelho);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    font-size: 1.2rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    line-height: 1.4;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    padding: 2rem 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--borda);
+    font-size: 0.75rem;
+    color: var(--branco-40);
+    letter-spacing: 0.05em;
+  }
+
+  /* ── BOTÃO PDF ── */
+  .pdf-btn {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: var(--vermelho);
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    z-index: 200;
+    text-decoration: none;
+    display: inline-block;
+    transition: background 0.2s;
+  }
+  .pdf-btn:hover { background: #aa0000; }
+
+  /* ── RESPONSIVO ── */
+  @media (max-width: 768px) {
+    .capa { grid-template-columns: 1fr; min-height: auto; }
+    .capa-direita { height: 280px; }
+    .capa-esquerda { padding: 2rem 1.5rem; }
+    .section, .section-full { padding: 2.5rem 1.5rem; }
+    .nav { padding: 0 1rem; }
+    .nav-links { display: none; }
+    .tracado-grid { grid-template-columns: 1fr; }
+    .numero-teste { font-size: 5rem; }
+    .pdf-btn { bottom: 1rem; right: 1rem; }
+    .tarefas-table { font-size: 0.78rem; }
+    .tarefas-table thead th, .tarefas-table tbody td { padding: 0.5rem 0.6rem; }
+  }
+
+  @media print {
+    .nav, .pdf-btn { display: none; }
+    .capa { min-height: auto; }
+    body { background: white; color: black; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAVEGAÇÃO -->
+<nav class="nav">
+  <div class="nav-logo">TR11 | Fórmula <span>UFMG</span></div>
+  <ul class="nav-links">
+    <li><a href="#objetivo">Objetivo</a></li>
+    <li><a href="#cronograma">Cronograma</a></li>
+    <li><a href="#tarefas">Tarefas</a></li>
+    <li><a href="#tracado">Traçado</a></li>
+    <li><a href="#procedimento">Procedimento</a></li>
+    <li><a href="#links">Links</a></li>
+  </ul>
+</nav>
+
+<!-- CAPA -->
+<section class="capa">
+  <div class="capa-esquerda">
+    <div>
+      <div class="numero-teste">#{{ numero | zfill(2) }}</div>
+      <div class="numero-label">Nº do Teste</div>
+
+      <table class="info-table">
+        <tr><td>Local</td><td>{{ local }}</td></tr>
+        <tr><td>Data</td><td>{{ data_formatada }}</td></tr>
+        <tr><td>Pilotos</td><td>{{ pilotos | join(', ') or '—' }}</td></tr>
+        <tr><td>Responsável</td><td>{{ responsavel }}</td></tr>
+      </table>
+
+      <div class="objetivos-block">
+        <div class="objetivos-label"><strong>Objetivos:</strong></div>
+        <div class="objetivos-text">{{ objetivos_capa }}</div>
+      </div>
+    </div>
+
+    <div class="capa-footer">
+      <div class="capa-footer-bar">
+        <div class="bar-vermelho"></div>
+        <div class="bar-azul"></div>
+      </div>
+      <div class="capa-footer-text">
+        <span class="team">Fórmula SAE UFMG</span>
+        Test Briefing | Temporada 2026
+      </div>
+    </div>
+  </div>
+
+  <div class="capa-direita">
+    {% if foto_capa %}
+    <img src="{{ foto_capa }}" alt="Fórmula UFMG">
+    {% endif %}
+  </div>
+</section>
+
+<!-- O QUE BUSCAMOS ATINGIR -->
+<div id="objetivo" class="section-full" style="background: var(--cinza-escuro);">
+  <div style="max-width:1200px; margin:0 auto;">
+    <div class="section-header">
+      <div>
+        <div class="section-acento"></div>
+        <div class="section-title">O que buscamos atingir?</div>
+        <div class="section-subtitle">*Resumo das seções "objetivos" e "hipótese" da metodologia.</div>
+      </div>
+      <div class="section-numero">TESTE #{{ numero | zfill(2) }}</div>
+    </div>
+    <div class="section-body">
+      {% for paragrafo in o_que_buscamos.split('\n') %}
+        {% if paragrafo.strip() %}<p>{{ paragrafo }}</p>{% endif %}
+      {% endfor %}
+    </div>
+    {% if kpis %}
+    <div class="kpi-list">
+      {% for kpi in kpis %}<div class="kpi-tag">{{ kpi }}</div>{% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ENTENDA O TESTE -->
+<div class="section-full">
+  <div style="max-width:1200px; margin:0 auto;">
+    <div class="section-header">
+      <div>
+        <div class="section-acento"></div>
+        <div class="section-title">Entenda o teste</div>
+        <div class="section-subtitle">*Resumo da seção "revisão teórica" da metodologia.</div>
+      </div>
+      <div class="section-numero">TESTE #{{ numero | zfill(2) }}</div>
+    </div>
+    <div class="section-body">
+      {% for paragrafo in entenda_o_teste.split('\n') %}
+        {% if paragrafo.strip() %}<p>{{ paragrafo }}</p>{% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- CRONOGRAMA -->
+<div id="cronograma" class="section-full" style="background: var(--cinza-escuro);">
+  <div style="max-width:1200px; margin:0 auto;">
+    <div class="section-header">
+      <div>
+        <div class="section-acento"></div>
+        <div class="section-title">Cronograma de teste</div>
+        <div class="section-subtitle">*Sujeito a alterações conforme impedimentos.</div>
+      </div>
+      <div class="section-numero">TESTE #{{ numero | zfill(2) }}</div>
+    </div>
+    <table class="cronograma-table">
+      <thead>
+        <tr>
+          <th>Atividade</th>
+          <th>Previsão</th>
+          <th>Comentários</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in cronograma %}
+        <tr>
+          <td>{{ item.atividade }}</td>
+          <td>{{ item.horario }}</td>
+          <td>{{ item.comentario or '' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- DIVISÃO DE TAREFAS -->
+<div id="tarefas" class="section-full">
+  <div style="max-width:1200px; margin:0 auto;">
+    <div class="section-header">
+      <div>
+        <div class="section-acento"></div>
+        <div class="section-title">Divisão de tarefas</div>
+        <div class="section-subtitle">*Feita conforme a disponibilidade levantada com formulário.</div>
+      </div>
+      <div class="section-numero">TESTE #{{ numero | zfill(2) }}</div>
+    </div>
+    <table class="tarefas-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nome</th>
+          <th>Subgrupo</th>
+          <th>Carro?</th>
+          <th>Tarefa Box</th>
+          <th>Tarefa Pista</th>
+          <th>Chegada</th>
+          <th>Saída</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i, m in membros | enumerate %}
+        <tr>
+          <td style="color:var(--branco-40)">{{ i + 1 }}</td>
+          <td>{{ m.nome }}</td>
+          <td>
+            <span class="tag tag-{{ m.subgrupo | lower | replace(' ', '') | replace('â', 'a') | replace('ô', 'o') | replace('ê', 'e') | replace('ã', 'a') }}">
+              {{ m.subgrupo }}
+            </span>
+          </td>
+          <td>
+            <span class="tag {{ 'tag-sim' if m.tem_carro else 'tag-nao' }}">
+              {{ 'Sim' if m.tem_carro else 'Não' }}
+            </span>
+          </td>
+          <td>{{ m.tarefa_box or '' }}</td>
+          <td>{{ m.tarefa_pista or '' }}</td>
+          <td style="color:var(--branco-40)">{{ m.chegada or '' }}</td>
+          <td style="color:var(--branco-40)">{{ m.saida or '' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MONTAGEM DO TRAÇADO -->
+{% if tracados %}
+<div id="tracado" class="section-full" style="background: var(--cinza-escuro);">
+  <div style="max-width:1200px; margin:0 auto;">
+    <div class="section-header">
+      <div>
+        <div class="section-acento"></div>
+        <div class="section-title">Montagem do traçado</div>
+        <div class="section-subtitle">*Ver divisão de tarefas.</div>
+      </div>
+      <div class="section-numero">TESTE #{{ numero | zfill(2) }}</div>
+    </div>
+    <div class="tracado-grid">
+      {% for tracado in tracados %}
+      <div class="tracado-card">
+        <div class="tracado-card-header">{{ tracado.label }}</div>
+        <img src="{{ tracado.src }}" alt="{{ tracado.label }}">
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- DIVISÃO DE SETORES -->
+{% if setores_img or setores_lista %}
+<div class="section-full">
+  <div style="max-width:1200px; margin:0 auto;">
+    <div class="section-header">
+      <div>
+        <div class="section-acento"></div>
+        <div class="section-title">Divisão de setores</div>
+        <div class="section-subtitle">*Para posicionamento na pista. Ver divisão de tarefas.</div>
+      </div>
+      <div class="section-numero">TESTE #{{ numero | zfill(2) }}</div>
+    </div>
+    {% if setores_lista %}
+    <div class="setores-list">
+      {% for s in setores_lista %}
+      <div class="setor-item">
+        <div class="setor-num">Setor {{ loop.index }}</div>
+        <div class="setor-desc">{{ s }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if setores_img %}
+    <div style="margin-top:2rem">
+      <img src="{{ setores_img }}" alt="Divisão de setores" style="width:100%; max-width:800px; display:block; margin:0 auto;">
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- PROCEDIMENTO EM PISTA -->
+<div class="section-full" style="background: var(--cinza-escuro);">
+  <div style="max-width:1200px; margin:0 auto;">
+    <div class="section-header">
+      <div>
+        <div class="section-acento"></div>
+        <div class="section-title">Procedimento em pista</div>
+        <div class="section-subtitle">*Feito conforme a seção homônima da metodologia. Ver divisão de tarefas.</div>
+      </div>
+      <div class="section-numero">TESTE #{{ numero | zfill(2) }}</div>
+    </div>
+    <ol class="procedimento-list">
+      {% for passo in procedimento_passos %}
+      <li>{{ passo }}</li>
+      {% endfor %}
+    </ol>
+  </div>
+</div>
+
+<!-- LINKS ÚTEIS -->
+<div id="links" class="section-full">
+  <div style="max-width:1200px; margin:0 auto;">
+    <div class="section-header">
+      <div>
+        <div class="section-acento"></div>
+        <div class="section-title">Links úteis</div>
+      </div>
+    </div>
+    <div class="links-grid">
+      {% if links.pasta_logs %}
+      <a href="{{ links.pasta_logs }}" target="_blank" class="link-card drive">
+        <span class="link-card-icon">📁</span> Pasta de Logs
+      </a>
+      {% endif %}
+      {% if links.fmea %}
+      <a href="{{ links.fmea }}" target="_blank" class="link-card form">
+        <span class="link-card-icon">📋</span> Formulário FMEA
+      </a>
+      {% endif %}
+      {% if links.feedback %}
+      <a href="{{ links.feedback }}" target="_blank" class="link-card form">
+        <span class="link-card-icon">📝</span> Formulário Feedback
+      </a>
+      {% endif %}
+      {% if links.tempo_volta %}
+      <a href="{{ links.tempo_volta }}" target="_blank" class="link-card form">
+        <span class="link-card-icon">⏱</span> Planilha Tempo de Volta
+      </a>
+      {% endif %}
+      {% if links.grupo_tempo %}
+      <a href="{{ links.grupo_tempo }}" target="_blank" class="link-card whats">
+        <span class="link-card-icon">💬</span> Grupo de Tempo
+      </a>
+      {% endif %}
+      {% if links.grupo_cone %}
+      <a href="{{ links.grupo_cone }}" target="_blank" class="link-card whats">
+        <span class="link-card-icon">💬</span> Grupo de Cone
+      </a>
+      {% endif %}
+    </div>
+
+    <div class="aviso-fmea">
+      Preencher FMEA e<br>feedback de piloto após<br>todos os testes!
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <span>Fórmula SAE UFMG — Test Briefing | Temporada 2026</span>
+  <span>Teste #{{ numero | zfill(2) }} · {{ data_formatada }}</span>
+</footer>
+
+<!-- BOTÃO PDF -->
+<a href="?export=pdf" class="pdf-btn">⬇ Exportar PDF</a>
+
+</body>
+</html>

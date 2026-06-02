@@ -1,0 +1,20 @@
+# Secrets e credenciais — NUNCA commitar
+.env
+.streamlit/secrets.toml
+credentials.json
+*.json.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Streamlit
+.streamlit/cache/
+
+# OS
+.DS_Store
+Thumbs.db
