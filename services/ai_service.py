@@ -159,8 +159,7 @@ Formato exato:
                 m["tarefa_pista"] = a.get("tarefa_pista", "")
                 m["piloto"] = a.get("piloto", False)
     except Exception as e:
-        print(f"Erro na sugestão de alocação: {e}")
-        # Mantém campos vazios se a IA falhar — usuário edita manualmente
+        raise RuntimeError(f"Erro na sugestão de alocação: {e}") from e
 
     return membros
 
@@ -211,8 +210,7 @@ Formato exato:
         raw = raw.replace("```json", "").replace("```", "").strip()
         return json.loads(raw)
     except Exception as e:
-        print(f"Erro na geração de seções: {e}")
-        return {"o_que_buscamos": "", "entenda_o_teste": "", "procedimento": ""}
+        raise RuntimeError(f"Erro na geração de seções: {e}") from e
 
 
 # ---------------------------------------------------------------------------
