@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Briefing T{{ numero | zfill(2) }} — Fórmula UFMG</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
     --preto: #0a0a0a;
@@ -23,12 +25,14 @@
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
+  html { scroll-behavior: smooth; }
   body {
     background: var(--preto);
     color: var(--branco);
     font-family: 'Barlow', sans-serif;
     font-size: 15px;
     line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
   }
 
   /* ── NAVEGAÇÃO ── */
@@ -37,8 +41,7 @@
     top: 0;
     z-index: 100;
     background: rgba(10,10,10,0.95);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--borda);
+      border-bottom: 1px solid var(--borda);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -221,7 +224,7 @@
   .section-title {
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 900;
-    font-size: clamp(1.8rem, 4vw, 2.4rem);
+    font-size: clamp(1.4rem, 3vw, 2rem);
     letter-spacing: 0.03em;
     text-transform: uppercase;
     line-height: 1;

@@ -268,30 +268,7 @@ def _admin_panel():
         )
         st.rerun()
 
-    # Debug temporário — mostra campos brutos do Notion
-    if st.checkbox("🔍 Debug: ver campos brutos do formulário de comparecimento"):
-        from services.notion_service import debug_db_properties, _get_comparecimento_db_id
-        db_id = _get_comparecimento_db_id(
-            st.session_state.briefing_data["local"] if st.session_state.get("briefing_data") else "RBC",
-            data_escolhida
-        )
-        if db_id:
-            try:
-                props = debug_db_properties(db_id)
-                st.json(props)
-                # Mostra também os valores brutos do primeiro membro
-                from services.notion_service import notion
-                results = notion.databases.query(database_id=db_id, page_size=1)["results"]
-                if results:
-                    st.write("**Valores brutos do primeiro registro:**")
-                    st.json({k: v for k, v in results[0]["properties"].items()
-                             if k in ["Subgrupo", "Você vai com o seu carro?",
-                                      "Que horas você pretende chegar?",
-                                      "Que horas você pretende sair?", "Nome"]})
-            except Exception as e:
-                st.error(f"Erro no debug: {e}")
-        else:
-            st.warning("Database ID não encontrado para este local/dia.")
+
 
     if not st.session_state.get("briefing_data"):
         return
@@ -562,10 +539,20 @@ def _admin_panel():
     col_prev, col_pub = st.columns(2)
 
     with col_prev:
-        if st.button("👁 Preview", type="secondary", use_container_width=True):
+        if st.button("👁 Preview em nova aba", type="secondary", use_container_width=True):
             from utils.renderer import render_html
+            import base64
             html = render_html(_build_full_briefing())
-            st.components.v1.html(html, height=900, scrolling=True)
+            b64 = base64.b64encode(html.encode()).decode()
+            st.markdown(
+                f'''<a href="data:text/html;base64,{b64}" target="_blank"
+                style="display:block;text-align:center;padding:0.5rem;
+                background:#1a1a1a;color:#fff;border:1px solid #444;
+                font-family:'Barlow Condensed',sans-serif;font-weight:700;
+                letter-spacing:0.08em;text-decoration:none;text-transform:uppercase;">
+                ↗ Abrir Preview</a>''',
+                unsafe_allow_html=True
+            )
 
     with col_pub:
         if st.button("🚀 Publicar briefing", type="primary", use_container_width=True):
