@@ -539,20 +539,30 @@ def _admin_panel():
     col_prev, col_pub = st.columns(2)
 
     with col_prev:
-        if st.button("👁 Preview em nova aba", type="secondary", use_container_width=True):
-            from utils.renderer import render_html
-            import base64
-            html = render_html(_build_full_briefing())
-            b64 = base64.b64encode(html.encode()).decode()
+        if st.button("👁 Preview", type="secondary", use_container_width=True):
+            full_preview = _build_full_briefing()
+            full_preview["_preview"] = True  # marca como temporário
+            with st.spinner("Gerando preview..."):
+                try:
+                    preview_id = save_briefing(full_preview)
+                    app_url = _get_secret("APP_URL", "http://localhost:8501")
+                    preview_url = f"{app_url}?b={preview_id}"
+                    st.session_state.preview_url = preview_url
+                except Exception as e:
+                    st.error(f"Erro ao gerar preview: {e}")
+
+        if st.session_state.get("preview_url"):
+            url = st.session_state.preview_url
             st.markdown(
-                f'''<a href="data:text/html;base64,{b64}" target="_blank"
-                style="display:block;text-align:center;padding:0.5rem;
-                background:#1a1a1a;color:#fff;border:1px solid #444;
-                font-family:'Barlow Condensed',sans-serif;font-weight:700;
-                letter-spacing:0.08em;text-decoration:none;text-transform:uppercase;">
-                ↗ Abrir Preview</a>''',
+                f'''<a href="{url}" target="_blank"
+                style="display:block;text-align:center;padding:0.7rem 1rem;
+                background:#1a3a8f;color:#fff;border:none;margin-top:0.5rem;
+                font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1rem;
+                letter-spacing:0.1em;text-decoration:none;text-transform:uppercase;">
+                ↗ ABRIR PREVIEW</a>''',
                 unsafe_allow_html=True
             )
+            st.caption("Link gerado — abre em qualquer dispositivo")
 
     with col_pub:
         if st.button("🚀 Publicar briefing", type="primary", use_container_width=True):
