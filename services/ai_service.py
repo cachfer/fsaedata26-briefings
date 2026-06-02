@@ -1,11 +1,11 @@
 """
 services/ai_service.py
-Sugestão de alocação de tarefas e geração das seções textuais via Groq API.
+Sugestão de alocação de tarefas e geração de seções textuais via Groq API (requests direto).
 """
 
 import os
 import json
-from groq import Groq
+import requests
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -19,27 +19,35 @@ def _get_secret(key: str, default: str = "") -> str:
         return os.environ.get(key, default)
 
 
-def _get_client() -> Groq:
+def _chat(prompt: str) -> str:
+    """Chama a API do Groq diretamente via requests e retorna o texto."""
     api_key = _get_secret("GROQ_API_KEY")
     if not api_key:
         raise ValueError("GROQ_API_KEY não configurada nos secrets.")
-    return Groq(api_key=api_key)
 
-
-def _chat(prompt: str) -> str:
-    """Envia um prompt para o Groq e retorna o texto da resposta."""
-    client = _get_client()
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
-        max_tokens=2000,
+    response = requests.post(
+        "https://api.groq.com/openai/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "model": "llama-3.3-70b-versatile",
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.3,
+            "max_tokens": 2000,
+        },
+        timeout=30,
     )
-    return response.choices[0].message.content.strip()
+
+    if response.status_code != 200:
+        raise RuntimeError(f"Groq API erro {response.status_code}: {response.text}")
+
+    return response.json()["choices"][0]["message"]["content"].strip()
 
 
 # ---------------------------------------------------------------------------
-# Exemplos few-shot extraídos dos briefings históricos
+# Exemplos few-shot
 # ---------------------------------------------------------------------------
 
 FEW_SHOT_ALOCACAO = """
@@ -55,7 +63,7 @@ Resultado:
 - Gustavo Fornazier → Supervisão / Supervisão
 - Matheus de Paula → Montagem Skid e Hairpin / Tempo de volta
 - Juliano Ornellas → Montagem Skid e Hairpin / Posição B
-- Gabriel → Warm Up / Posição B (Motor obrigatório no warm up)
+- Gabriel → Warm Up / Posição B
 - Enrico → (sem tarefa box) / Posição A
 - Bernardo → Feedback de piloto / Tempo de volta
 - Vinícius Ângelo → Limpeza da pista / Posição A
@@ -109,6 +117,7 @@ def suggest_task_allocation(
     local: str,
     circuito: str,
 ) -> list[dict]:
+
     membros_str = "\n".join(
         f"- {m['nome']} ({m['subgrupo']})"
         + (f", chega {m['chegada']}" if m.get("chegada") else "")
@@ -122,33 +131,31 @@ def suggest_task_allocation(
         for v in validacoes
     )
 
-    prompt = f"""Você é engenheira de corrida da equipe Fórmula SAE UFMG.
-Sugira a alocação de tarefas para o dia de teste com base nas informações abaixo.
+    prompt = f"""Você é engenheira de corrida da equipe Formula SAE UFMG.
+Sugira a alocacao de tarefas para o dia de teste.
 
-REGRAS OBRIGATÓRIAS:
-1. Capitania → Supervisão (pelo menos um DEVE estar na supervisão)
-2. Motor → Warm Up (pelo menos um DEVE estar no warm up)
-3. Dinâmica e Eletrônica → preferencialmente no Warm Up
-4. Freio → preferencialmente no setor/posição de frenagem
+REGRAS:
+1. Capitania -> Supervisao (pelo menos um)
+2. Motor -> Warm Up (obrigatorio pelo menos um)
+3. Dinamica e Eletronica -> preferencialmente Warm Up
+4. Freio -> setor de frenagem
 5. Pilotos designados recebem tarefa "Piloto" em ambas as colunas
 6. Membros com chegada tardia podem ficar sem tarefa de box
 
 LOCAL: {local}
 CIRCUITO: {circuito}
 
-MEMBROS CONFIRMADOS:
+MEMBROS:
 {membros_str}
 
-VALIDAÇÕES DO DIA:
+VALIDACOES:
 {validacoes_str}
 
-REFERÊNCIAS DE ALOCAÇÕES ANTERIORES:
+EXEMPLOS:
 {FEW_SHOT_ALOCACAO}
 
-Responda APENAS com JSON válido, sem texto adicional, sem markdown, sem backticks.
-Formato exato:
-{{"alocacao": [{{"nome": "Nome do membro", "tarefa_box": "tarefa ou vazio", "tarefa_pista": "tarefa ou vazio", "piloto": false}}]}}
-"""
+Responda APENAS com JSON valido, sem texto, sem markdown, sem backticks.
+Formato: {{"alocacao": [{{"nome": "Nome", "tarefa_box": "tarefa", "tarefa_pista": "tarefa", "piloto": false}}]}}"""
 
     try:
         raw = _chat(prompt)
@@ -172,31 +179,29 @@ Formato exato:
 # ---------------------------------------------------------------------------
 
 def generate_briefing_sections(validacoes: list[dict]) -> dict:
+
     validacoes_str = "\n\n".join(
-        f"VALIDAÇÃO: {v['nome']}\n"
+        f"VALIDACAO: {v['nome']}\n"
         f"Objetivos: {v.get('objetivos', '')}\n"
-        f"Hipótese: {v.get('hipotese', '')}\n"
-        f"Revisão teórica: {v.get('revisao_teorica', '')}\n"
+        f"Hipotese: {v.get('hipotese', '')}\n"
+        f"Revisao teorica: {v.get('revisao_teorica', '')}\n"
         f"Procedimento: {v.get('procedimento', '')}"
         for v in validacoes
     )
 
-    prompt = f"""Você é engenheira de corrida da equipe Fórmula SAE UFMG.
-Estilo: técnico, direto, terminologia de engenharia automotiva, em português.
+    prompt = f"""Voce e engenheira de corrida da equipe Formula SAE UFMG.
+Estilo: tecnico, direto, terminologia de engenharia automotiva, em portugues.
 
-DADOS DAS VALIDAÇÕES DO DIA:
+VALIDACOES DO DIA:
 {validacoes_str}
 
-Gere conteúdo para três seções do briefing:
+Gere 3 secoes:
+- "o_que_buscamos": resumo dos objetivos e hipoteses, 2-4 paragrafos, mencione KPIs se houver
+- "entenda_o_teste": contexto teorico acessivel a todos, 2-3 paragrafos
+- "procedimento": passos numerados consolidando os procedimentos
 
-"O QUE BUSCAMOS ATINGIR": resumo dos objetivos e hipóteses em 2-4 parágrafos. Mencione KPIs se houver.
-"ENTENDA O TESTE": contexto teórico acessível a todos os membros, 2-3 parágrafos.
-"PROCEDIMENTO EM PISTA": passos numerados consolidando os procedimentos.
-
-Responda APENAS com JSON válido, sem texto adicional, sem markdown, sem backticks.
-Formato exato:
-{{"o_que_buscamos": "texto...", "entenda_o_teste": "texto...", "procedimento": "1. passo\\n2. passo\\n3. passo"}}
-"""
+Responda APENAS com JSON valido, sem texto, sem markdown, sem backticks.
+Formato: {{"o_que_buscamos": "texto", "entenda_o_teste": "texto", "procedimento": "1. passo\\n2. passo"}}"""
 
     try:
         raw = _chat(prompt)
@@ -213,7 +218,7 @@ Formato exato:
 def generate_schedule(local: str, validacoes: list[dict], num_pilotos: int) -> list[dict]:
     local_lower = local.lower()
 
-    if "rbc" in local_lower or "kartodromo" in local_lower or "kartódromo" in local_lower:
+    if "rbc" in local_lower or "kart" in local_lower:
         base = [
             {"atividade": "CHEGADA NA OFICINA",      "horario": "09h30", "comentario": ""},
             {"atividade": "SAÍDA DA OFICINA",         "horario": "10h30", "comentario": ""},
@@ -223,9 +228,9 @@ def generate_schedule(local: str, validacoes: list[dict], num_pilotos: int) -> l
         ]
         hora = 12 * 60
         for i in range(num_pilotos):
-            inicio = f"{hora // 60:02d}h{hora % 60:02d}"
+            inicio = f"{hora//60:02d}h{hora%60:02d}"
             hora += 30
-            fim = f"{hora // 60:02d}h{hora % 60:02d}"
+            fim = f"{hora//60:02d}h{hora%60:02d}"
             comentario = "*Sobrando tempo, próximo piloto entra" if i < num_pilotos - 1 else ""
             base.append({"atividade": f"EM PISTA – PILOTO {i+1}", "horario": f"{inicio} – {fim}", "comentario": comentario})
         base += [
