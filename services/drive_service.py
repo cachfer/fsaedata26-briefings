@@ -23,6 +23,22 @@ TRACADOS_FOLDER_ID = os.environ.get("DRIVE_TRACADOS_FOLDER_ID", "")
 BRIEFINGS_FOLDER_ID = os.environ.get("DRIVE_BRIEFINGS_FOLDER_ID", "")
 
 
+def _drive_request_kwargs() -> dict:
+    return {"supportsAllDrives": True}
+
+
+def _drive_list_kwargs() -> dict:
+    return {"supportsAllDrives": True, "includeItemsFromAllDrives": True}
+
+
+def _require_briefings_folder_id() -> str:
+    if not BRIEFINGS_FOLDER_ID or BRIEFINGS_FOLDER_ID.startswith("xxxx"):
+        raise RuntimeError(
+            "DRIVE_BRIEFINGS_FOLDER_ID não configurado. Defina o ID da pasta do Drive usada para publicar os briefings."
+        )
+    return BRIEFINGS_FOLDER_ID
+
+
 def _get_service():
     """
     Cria e retorna o cliente autenticado do Google Drive.
@@ -62,7 +78,11 @@ def list_tracados(local: str) -> list[dict]:
         f"and mimeType = 'application/vnd.google-apps.folder' "
         f"and trashed = false"
     )
-    folders = service.files().list(q=query, fields="files(id, name)").execute()["files"]
+    folders = service.files().list(
+        q=query,
+        fields="files(id, name)",
+        **_drive_list_kwargs(),
+    ).execute()["files"]
 
     pasta_local = None
     for f in folders:
@@ -80,7 +100,9 @@ def list_tracados(local: str) -> list[dict]:
         f"and trashed = false"
     )
     imgs = service.files().list(
-        q=query_imgs, fields="files(id, name, webContentLink)"
+        q=query_imgs,
+        fields="files(id, name, webContentLink)",
+        **_drive_list_kwargs(),
     ).execute()["files"]
 
     result = []
@@ -99,7 +121,7 @@ def list_tracados(local: str) -> list[dict]:
 def download_tracado(file_id: str) -> bytes:
     """Baixa uma imagem de traçado pelo ID e retorna os bytes."""
     service = _get_service()
-    request = service.files().get_media(fileId=file_id)
+    request = service.files().get_media(fileId=file_id, **_drive_request_kwargs())
     buf = io.BytesIO()
     downloader = MediaIoBaseDownload(buf, request)
     done = False
@@ -118,6 +140,7 @@ def save_briefing(briefing_data: dict) -> str:
     Retorna o file_id do arquivo criado/atualizado.
     """
     service = _get_service()
+    folder_id = _require_briefings_folder_id()
     test_date = briefing_data.get("data", "")
     test_num = briefing_data.get("numero", "XX")
     filename = f"briefing_T{str(test_num).zfill(2)}_{test_date}.json"
@@ -127,11 +150,15 @@ def save_briefing(briefing_data: dict) -> str:
 
     # Verifica se já existe um arquivo com esse nome
     query = (
-        f"'{BRIEFINGS_FOLDER_ID}' in parents "
+        f"'{folder_id}' in parents "
         f"and name = '{filename}' "
         f"and trashed = false"
     )
-    existing = service.files().list(q=query, fields="files(id)").execute()["files"]
+    existing = service.files().list(
+        q=query,
+        fields="files(id)",
+        **_drive_list_kwargs(),
+    ).execute()["files"]
 
     if existing:
         # Atualiza
@@ -139,14 +166,16 @@ def save_briefing(briefing_data: dict) -> str:
         service.files().update(
             fileId=file_id,
             media_body=MediaIoBaseUpload(buf, mimetype="application/json"),
+            **_drive_request_kwargs(),
         ).execute()
     else:
         # Cria novo
-        metadata = {"name": filename, "parents": [BRIEFINGS_FOLDER_ID]}
+        metadata = {"name": filename, "parents": [folder_id]}
         file = service.files().create(
             body=metadata,
             media_body=MediaIoBaseUpload(buf, mimetype="application/json"),
             fields="id",
+            **_drive_request_kwargs(),
         ).execute()
         file_id = file["id"]
 
@@ -160,7 +189,7 @@ def list_briefings() -> list[dict]:
     """
     service = _get_service()
     query = (
-        f"'{BRIEFINGS_FOLDER_ID}' in parents "
+        f"'{_require_briefings_folder_id()}' in parents "
         f"and mimeType = 'application/json' "
         f"and trashed = false"
     )
@@ -168,6 +197,7 @@ def list_briefings() -> list[dict]:
         q=query,
         fields="files(id, name, createdTime)",
         orderBy="createdTime desc",
+        **_drive_list_kwargs(),
     ).execute()["files"]
 
     result = []
@@ -190,7 +220,7 @@ def load_briefing(file_id: str) -> dict | None:
     """Carrega um briefing publicado pelo file_id do Drive."""
     try:
         service = _get_service()
-        request = service.files().get_media(fileId=file_id)
+        request = service.files().get_media(fileId=file_id, **_drive_request_kwargs())
         buf = io.BytesIO()
         downloader = MediaIoBaseDownload(buf, request)
         done = False

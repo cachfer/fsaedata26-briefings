@@ -569,7 +569,11 @@ def _admin_panel():
             full["publicado_em"] = datetime.now().isoformat()
 
             with st.spinner("Salvando no Drive..."):
-                file_id = save_briefing(full)
+                try:
+                    file_id = save_briefing(full)
+                except Exception as e:
+                    st.error(f"Erro ao publicar briefing: {e}")
+                    st.stop()
 
             app_url = _get_secret("APP_URL", "http://localhost:8501")
             link_publico = f"{app_url}?b={file_id}"
