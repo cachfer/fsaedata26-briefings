@@ -540,29 +540,28 @@ def _admin_panel():
 
     with col_prev:
         if st.button("👁 Preview", type="secondary", use_container_width=True):
+            from utils.renderer import render_html
+
             full_preview = _build_full_briefing()
-            full_preview["_preview"] = True  # marca como temporário
             with st.spinner("Gerando preview..."):
                 try:
-                    preview_id = save_briefing(full_preview)
-                    app_url = _get_secret("APP_URL", "http://localhost:8501")
-                    preview_url = f"{app_url}?b={preview_id}"
-                    st.session_state.preview_url = preview_url
+                    st.session_state.preview_html = render_html(full_preview)
+                    st.session_state.preview_ready = True
                 except Exception as e:
                     st.error(f"Erro ao gerar preview: {e}")
 
-        if st.session_state.get("preview_url"):
-            url = st.session_state.preview_url
-            st.markdown(
-                f'''<a href="{url}" target="_blank"
-                style="display:block;text-align:center;padding:0.7rem 1rem;
-                background:#1a3a8f;color:#fff;border:none;margin-top:0.5rem;
-                font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:1rem;
-                letter-spacing:0.1em;text-decoration:none;text-transform:uppercase;">
-                ↗ ABRIR PREVIEW</a>''',
-                unsafe_allow_html=True
+        if st.session_state.get("preview_ready") and st.session_state.get("preview_html"):
+            st.caption("Preview temporário, sem salvar no Drive.")
+            st.components.v1.html(st.session_state.preview_html, height=12000, scrolling=True)
+
+            preview_bytes = st.session_state.preview_html.encode("utf-8")
+            st.download_button(
+                label="📄 Baixar HTML do preview",
+                data=preview_bytes,
+                file_name="briefing_preview.html",
+                mime="text/html",
+                use_container_width=True,
             )
-            st.caption("Link gerado — abre em qualquer dispositivo")
 
     with col_pub:
         if st.button("🚀 Publicar briefing", type="primary", use_container_width=True):
