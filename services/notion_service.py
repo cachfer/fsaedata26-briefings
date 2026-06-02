@@ -31,8 +31,20 @@ METODOLOGIAS_DB = _get_secret("NOTION_METODOLOGIAS_DB_ID")
 def _text(prop) -> str:
     if not prop:
         return ""
+    # rich_text e title
     content = prop.get("rich_text") or prop.get("title") or []
-    return "".join(c.get("plain_text", "") for c in content)
+    if content:
+        return "".join(c.get("plain_text", "") for c in content)
+    # number
+    if prop.get("number") is not None:
+        return str(prop["number"])
+    # phone_number
+    if prop.get("phone_number"):
+        return str(prop["phone_number"])
+    # email
+    if prop.get("email"):
+        return str(prop["email"])
+    return ""
 
 
 def _select(prop) -> str:
@@ -237,13 +249,13 @@ def get_membros_confirmados(local: str, data: date) -> list[dict]:
             continue
         nomes_vistos.add(nome)
 
-        # Subgrupo — tenta várias variações
+        # Subgrupo — select no Notion
         subgrupo_prop = _find_prop(props, [
             "Subgrupo", "subgrupo", "Sub-grupo", "Grupo", "grupo"
         ])
         subgrupo = _select(subgrupo_prop) or _text(subgrupo_prop)
 
-        # Carro — tenta várias variações
+        # Carro
         carro_prop = _find_prop(props, [
             "Você vai com o seu carro?",
             "Vai de carro?",
@@ -251,16 +263,22 @@ def get_membros_confirmados(local: str, data: date) -> list[dict]:
             "carro",
             "Tem carro?",
         ])
-        tem_carro = _select(carro_prop) == "Sim"
+        carro_valor = _select(carro_prop) or _text(carro_prop)
+        tem_carro = carro_valor.strip().lower() in ("sim", "yes", "s")
 
-        # Chegada / Saída
+        # Chegada / Saída — nomes exatos do formulário
         chegada_prop = _find_prop(props, [
-            "Que horas você chega?", "Chegada", "chegada", "Horário de chegada"
+            "Que horas você pretende chegar?",
+            "Que horas você chega?",
+            "Chegada", "chegada", "Horário de chegada",
         ])
         saida_prop = _find_prop(props, [
-            "Que horas você sai?", "Saída", "saida", "Horário de saída"
+            "Que horas você pretende sair?",
+            "Que horas você sai?",
+            "Saída", "saida", "Horário de saída",
         ])
 
+        # Chegada e saída podem ser rich_text, select ou number
         chegada = _text(chegada_prop) or _select(chegada_prop)
         saida = _text(saida_prop) or _select(saida_prop)
 
