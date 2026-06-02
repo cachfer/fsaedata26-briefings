@@ -19,6 +19,19 @@ def _get_secret(key: str, default: str = "") -> str:
         return os.environ.get(key, default)
 
 
+def _get_historicos() -> str:
+    """Carrega texto dos briefings históricos do Drive (com cache)."""
+    try:
+        from services.drive_service import get_historicos_texto
+        texto = get_historicos_texto(max_briefings=15)
+        # Limita a ~8000 chars para não estourar o contexto do modelo
+        if len(texto) > 8000:
+            texto = texto[:8000] + "\n...[truncado]"
+        return texto
+    except Exception:
+        return ""
+
+
 def _chat(prompt: str) -> str:
     """Chama a API do Groq diretamente via requests e retorna o texto."""
     api_key = _get_secret("GROQ_API_KEY")
@@ -164,8 +177,11 @@ MEMBROS:
 VALIDACOES:
 {validacoes_str}
 
-EXEMPLOS:
+EXEMPLOS DE ALOCACAO DE BRIEFINGS ANTERIORES:
 {FEW_SHOT_ALOCACAO}
+
+BRIEFINGS HISTORICOS COMPLETOS PARA REFERENCIA:
+{_get_historicos()}
 
 Responda APENAS com JSON valido, sem texto, sem markdown, sem backticks.
 Formato: {{"alocacao": [{{"nome": "Nome", "tarefa_box": "tarefa", "tarefa_pista": "tarefa", "piloto": false}}]}}"""
@@ -205,11 +221,15 @@ def generate_briefing_sections(validacoes: list[dict]) -> dict:
 
     prompt = f"""Voce e engenheira de corrida da equipe Formula SAE UFMG.
 Estilo: tecnico, direto, terminologia de engenharia automotiva, em portugues.
+Use os briefings historicos abaixo como referencia de estilo, nivel tecnico e estrutura.
+
+BRIEFINGS HISTORICOS PARA REFERENCIA DE ESTILO:
+{_get_historicos()}
 
 VALIDACOES DO DIA:
 {validacoes_str}
 
-Gere 3 secoes:
+Gere 3 secoes no mesmo estilo dos briefings historicos:
 - "o_que_buscamos": resumo dos objetivos e hipoteses, 2-4 paragrafos, mencione KPIs se houver
 - "entenda_o_teste": contexto teorico acessivel a todos, 2-3 paragrafos
 - "procedimento": passos numerados consolidando os procedimentos

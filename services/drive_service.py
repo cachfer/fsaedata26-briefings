@@ -199,3 +199,82 @@ def load_briefing(file_id: str) -> dict | None:
         return json.loads(buf.getvalue().decode("utf-8"))
     except Exception:
         return None
+
+# ---------------------------------------------------------------------------
+# Briefings históricos (PDFs na pasta TRX)
+# ---------------------------------------------------------------------------
+
+TRX_FOLDER_ID = "1J8LNkebfGKWgLUuUHROe9rMbzk1ZFunI"
+
+def _extract_pdf_text(pdf_bytes: bytes) -> str:
+    """Extrai texto de um PDF em bytes usando pypdf."""
+    try:
+        from pypdf import PdfReader
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        pages = []
+        for page in reader.pages:
+            text = page.extract_text()
+            if text and text.strip():
+                pages.append(text.strip())
+        return "\n\n".join(pages)
+    except Exception as e:
+        return ""
+
+
+def get_historicos_texto(max_briefings: int = 10) -> str:
+    """
+    Baixa e extrai texto dos PDFs históricos da pasta TRX.
+    Retorna string concatenada com todos os briefings, usada como
+    contexto para a IA. Usa cache no session_state do Streamlit.
+    """
+    # Cache no Streamlit para não baixar toda vez
+    try:
+        import streamlit as st
+        if "historicos_cache" in st.session_state:
+            return st.session_state.historicos_cache
+    except Exception:
+        pass
+
+    service = _get_service()
+
+    # Lista PDFs na pasta TRX
+    query = (
+        f"'{TRX_FOLDER_ID}' in parents "
+        f"and mimeType = 'application/pdf' "
+        f"and trashed = false"
+    )
+    try:
+        files = service.files().list(
+            q=query,
+            fields="files(id, name)",
+            orderBy="name desc",
+            pageSize=max_briefings,
+        ).execute()["files"]
+    except Exception as e:
+        return ""
+
+    textos = []
+    for f in files:
+        try:
+            request = service.files().get_media(fileId=f["id"])
+            buf = io.BytesIO()
+            downloader = MediaIoBaseDownload(buf, request)
+            done = False
+            while not done:
+                _, done = downloader.next_chunk()
+            texto = _extract_pdf_text(buf.getvalue())
+            if texto:
+                textos.append(f"=== BRIEFING: {f['name']} ===\n{texto}")
+        except Exception:
+            continue
+
+    resultado = "\n\n".join(textos)
+
+    # Salva no cache
+    try:
+        import streamlit as st
+        st.session_state.historicos_cache = resultado
+    except Exception:
+        pass
+
+    return resultado
