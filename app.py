@@ -223,9 +223,20 @@ def _admin_panel():
         st.warning("Nenhum teste encontrado no Notion.")
         return
 
-    datas_str = [d.strftime("%d/%m/%Y") for d in datas]
-    data_escolhida_str = st.selectbox("Data do teste", options=datas_str, index=0)
-    data_escolhida = datas[datas_str.index(data_escolhida_str)]
+    from datetime import date as date_type
+    hoje = date_type.today()
+    # Pré-seleciona hoje se houver teste, senão a data mais próxima futura
+    default_date = hoje if hoje in datas else min((d for d in datas if d >= hoje), default=datas[-1])
+    data_escolhida = st.date_input(
+        "Data do teste",
+        value=default_date,
+        min_value=min(datas),
+        max_value=max(datas),
+        format="DD/MM/YYYY",
+    )
+    if data_escolhida not in datas:
+        st.warning("Não há teste cadastrado no Notion para esta data.")
+        return
 
     # Reset de estado ao trocar de data
     if st.session_state.get("data_selecionada") != data_escolhida:
@@ -297,7 +308,12 @@ def _admin_panel():
         bd["local"] = st.text_input("Local", value=bd.get("local", ""))
     with col2:
         bd["responsavel"] = st.text_input("Responsável", value=bd.get("responsavel", "Carolina Ferrari"))
-        bd["circuito"] = st.text_input("Circuito", value=bd.get("circuito", ""))
+        CIRCUITOS_DISPONIVEIS = ["A", "B", "C", "D", "E", "Enduro", "Livre", "SkidPad", "Hairpin", "Autocross"]
+        circuito_atual = bd.get("circuito", "")
+        if circuito_atual and circuito_atual not in CIRCUITOS_DISPONIVEIS:
+            CIRCUITOS_DISPONIVEIS = [circuito_atual] + CIRCUITOS_DISPONIVEIS
+        idx = CIRCUITOS_DISPONIVEIS.index(circuito_atual) if circuito_atual in CIRCUITOS_DISPONIVEIS else 0
+        bd["circuito"] = st.selectbox("Circuito", options=CIRCUITOS_DISPONIVEIS, index=idx)
 
     bd["objetivos_capa"] = st.text_area(
         "Objetivos (resumo para a capa)",
@@ -459,13 +475,29 @@ def _admin_panel():
 
     if tracados_disponiveis:
         nomes_tracados = [t["name"] for t in tracados_disponiveis]
+
+        # Seleção automática baseada no circuito escolhido
+        circuito_lower = bd.get("circuito", "").lower().strip()
+        auto_selecionados = []
+        if circuito_lower:
+            for nome in nomes_tracados:
+                nome_lower = nome.lower()
+                # Casa com padrão: tracado_C_montagem, tracado_C_setores, etc.
+                if circuito_lower in nome_lower or f"_{circuito_lower}_" in nome_lower or nome_lower.startswith(circuito_lower):
+                    auto_selecionados.append(nome)
+
+        default_selecionados = auto_selecionados or [
+            n for n in st.session_state.tracados_selecionados
+            if n in nomes_tracados
+        ]
+
+        if auto_selecionados:
+            st.caption(f"✅ {len(auto_selecionados)} imagem(ns) selecionada(s) automaticamente para o circuito **{bd['circuito']}**")
+
         selecionados = st.multiselect(
-            "Selecione as imagens de traçado/setores",
+            "Imagens de traçado/setores",
             options=nomes_tracados,
-            default=[
-                n for n in st.session_state.tracados_selecionados
-                if n in nomes_tracados
-            ],
+            default=default_selecionados,
         )
         st.session_state.tracados_selecionados = selecionados
 
