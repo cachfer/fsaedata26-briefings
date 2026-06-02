@@ -48,9 +48,15 @@ def _text(prop) -> str:
 
 
 def _select(prop) -> str:
-    if not prop or not prop.get("select"):
+    if not prop:
         return ""
-    return prop["select"]["name"]
+    # select simples
+    if prop.get("select"):
+        return prop["select"]["name"]
+    # multi_select — retorna o primeiro valor
+    if prop.get("multi_select"):
+        return prop["multi_select"][0]["name"] if prop["multi_select"] else ""
+    return ""
 
 
 def _date(prop) -> str:
