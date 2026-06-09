@@ -430,6 +430,7 @@ def _admin_panel():
         for m in st.session_state.membros_editados
     ])
 
+    st.caption("← Deslize a tabela para ver todas as colunas →")
     edited_df = st.data_editor(
         membros_df,
         use_container_width=True,
@@ -634,45 +635,31 @@ def _admin_panel():
         }
 
     col_prev, col_pub = st.columns(2)
-
     with col_prev:
-        if st.button("👁 Preview", type="secondary", use_container_width=True):
-            from utils.renderer import render_html
-
-            full_preview = _build_full_briefing()
-            with st.spinner("Gerando preview..."):
-                try:
-                    st.session_state.preview_html = render_html(full_preview)
-                    st.session_state.preview_ready = True
-                except Exception as e:
-                    st.error(f"Erro ao gerar preview: {e}")
-
-        if st.session_state.get("preview_ready") and st.session_state.get("preview_html"):
-            st.caption("Preview temporário, sem salvar no Drive.")
-            st.components.v1.html(st.session_state.preview_html, height=12000, scrolling=True)
-
-            preview_bytes = st.session_state.preview_html.encode("utf-8")
-            st.download_button(
-                label="📄 Baixar HTML do preview",
-                data=preview_bytes,
-                file_name="briefing_preview.html",
-                mime="text/html",
-                use_container_width=True,
-            )
-
+        preview_btn = st.button("👁 Preview", type="secondary", use_container_width=True)
     with col_pub:
-        if st.button("🚀 Publicar briefing", type="primary", use_container_width=True):
-            full = _build_full_briefing()
-            from utils.renderer import render_html, render_pdf
-            num = str(full.get("numero", "XX")).zfill(2)
+        publish_btn = st.button("🚀 Publicar briefing", type="primary", use_container_width=True)
 
-            with st.spinner("Gerando arquivos..."):
-                st.session_state.publish_pdf_bytes = render_pdf(full)
-                st.session_state.publish_html_bytes = render_html(full).encode("utf-8")
-                st.session_state.publish_num = num
-                st.session_state.publish_data = str(data_escolhida)
+    if preview_btn:
+        from utils.renderer import render_html
+        full_preview = _build_full_briefing()
+        with st.spinner("Gerando preview..."):
+            try:
+                st.session_state.preview_html = render_html(full_preview)
+                st.session_state.preview_ready = True
+            except Exception as e:
+                st.error(f"Erro ao gerar preview: {e}")
 
-            st.success("Briefing gerado!")
+    if publish_btn:
+        full = _build_full_briefing()
+        from utils.renderer import render_html, render_pdf
+        num = str(full.get("numero", "XX")).zfill(2)
+        with st.spinner("Gerando arquivos..."):
+            st.session_state.publish_pdf_bytes = render_pdf(full)
+            st.session_state.publish_html_bytes = render_html(full).encode("utf-8")
+            st.session_state.publish_num = num
+            st.session_state.publish_data = str(data_escolhida)
+        st.success("Briefing gerado!")
 
     if st.session_state.get("publish_pdf_bytes"):
         num_pub = st.session_state.publish_num
@@ -702,6 +689,17 @@ def _admin_panel():
             st.markdown("**Link para compartilhar no grupo:**")
             st.code(manual_link)
             st.markdown(f"[Abrir briefing ↗]({manual_link})")
+
+    if st.session_state.get("preview_ready") and st.session_state.get("preview_html"):
+        st.caption("Preview temporário, sem salvar no Drive.")
+        st.components.v1.html(st.session_state.preview_html, height=12000, scrolling=True)
+        st.download_button(
+            label="📄 Baixar HTML do preview",
+            data=st.session_state.preview_html.encode("utf-8"),
+            file_name="briefing_preview.html",
+            mime="text/html",
+            use_container_width=True,
+        )
 
 
 # ════════════════════════════════════════════════════════════════════════════

@@ -647,6 +647,7 @@
 </section>
 
 <!-- O QUE BUSCAMOS ATINGIR -->
+{% if o_que_buscamos and o_que_buscamos.strip() %}
 <div id="objetivo" class="section-full" style="background: var(--cinza-escuro);">
   <div style="max-width:1200px; margin:0 auto;">
     <div class="section-header">
@@ -669,8 +670,10 @@
     {% endif %}
   </div>
 </div>
+{% endif %}
 
 <!-- ENTENDA O TESTE -->
+{% if entenda_o_teste and entenda_o_teste.strip() %}
 <div class="section-full">
   <div style="max-width:1200px; margin:0 auto;">
     <div class="section-header">
@@ -688,6 +691,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 
 <!-- CRONOGRAMA -->
 <div id="cronograma" class="section-full" style="background: var(--cinza-escuro);">
@@ -827,6 +831,7 @@
 {% endif %}
 
 <!-- PROCEDIMENTO EM PISTA -->
+{% if procedimento_passos %}
 <div class="section-full" style="background: var(--cinza-escuro);">
   <div style="max-width:1200px; margin:0 auto;">
     <div class="section-header">
@@ -844,6 +849,7 @@
     </ol>
   </div>
 </div>
+{% endif %}
 
 <!-- LINKS ÚTEIS -->
 <div id="links" class="section-full">
