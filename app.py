@@ -390,9 +390,11 @@ def _admin_panel():
                     try:
                         membros = get_membros_confirmados(local_atual, data_escolhida)
                         st.session_state.membros_raw = membros
-                        st.session_state.membros_editados = None
-                        st.success(f"✅ {len(membros)} membros confirmados carregados.")
-                        st.rerun()
+                        st.session_state.membros_editados = [m.copy() for m in membros]
+                        if membros:
+                            st.success(f"✅ {len(membros)} membros confirmados carregados.")
+                        else:
+                            st.warning("Nenhum membro encontrado. Verifique se o local está correto e se há respostas no formulário.")
                     except Exception as e:
                         st.error(f"Erro ao carregar membros do Notion: {e}")
 
