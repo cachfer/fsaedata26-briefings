@@ -440,6 +440,8 @@ def _admin_panel():
 
     def _is_piloto(nome_membro: str, pilotos: list[str]) -> bool:
         """Verifica se um membro é piloto por correspondência parcial de nome."""
+        if not nome_membro:
+            return False
         nome_lower = nome_membro.lower()
         for p in pilotos:
             p_lower = p.lower()
