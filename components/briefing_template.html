@@ -557,9 +557,51 @@
   }
 
   @media print {
-    .nav, .pdf-btn { display: none; }
-    .capa { min-height: auto; }
-    body { background: white; color: black; }
+    /* Redefine variáveis para tema claro */
+    :root {
+      --preto: #ffffff;
+      --cinza-escuro: #f4f4f4;
+      --cinza-medio: #eeeeee;
+      --cinza-claro: #e0e0e0;
+      --borda: #cccccc;
+      --branco: #111111;
+      --branco-70: #333333;
+      --branco-40: #666666;
+    }
+
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+    .nav, .pdf-btn { display: none !important; }
+
+    html, body { background: white !important; color: #111 !important; }
+
+    .capa {
+      min-height: auto !important;
+      background: #111 !important;
+      color: white !important;
+      page-break-after: always;
+    }
+    .capa * { color: white !important; }
+
+    .section-full, .section { page-break-inside: avoid; }
+
+    .tarefas-table, .cronograma-table { font-size: 9pt !important; }
+    .tarefas-table th, .tarefas-table td,
+    .cronograma-table th, .cronograma-table td {
+      border: 1px solid #bbb !important;
+      padding: 4pt 6pt !important;
+    }
+    .tarefas-table thead tr, .cronograma-table thead tr {
+      background: #e0e0e0 !important;
+    }
+    .tag {
+      border: 1px solid #999 !important;
+      color: #111 !important;
+      background: #eee !important;
+    }
+    .kpi-card { border: 1px solid #bbb !important; background: #f9f9f9 !important; }
+    .kpi-valor { color: var(--vermelho) !important; }
+    a { color: #111 !important; text-decoration: none !important; }
   }
 
   /* ── OTIMIZAÇÕES DE PERFORMANCE ── */
@@ -736,17 +778,16 @@
       </div>
       <div class="section-numero">TESTE #{{ numero | zfill(2) }}</div>
     </div>
+    <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
     <table class="tarefas-table">
       <thead>
         <tr>
           <th>#</th>
           <th>Nome</th>
           <th>Subgrupo</th>
-          <th>Carro?</th>
           <th>Tarefa Box</th>
           <th>Tarefa Pista</th>
           <th>Chegada</th>
-          <th>Saída</th>
         </tr>
       </thead>
       <tbody>
@@ -759,19 +800,14 @@
               {{ m.subgrupo }}
             </span>
           </td>
-          <td>
-            <span class="tag {{ 'tag-sim' if m.tem_carro else 'tag-nao' }}">
-              {{ 'Sim' if m.tem_carro else 'Não' }}
-            </span>
-          </td>
           <td>{{ m.tarefa_box or '' }}</td>
           <td>{{ m.tarefa_pista or '' }}</td>
           <td style="color:var(--branco-40)">{{ m.chegada or '' }}</td>
-          <td style="color:var(--branco-40)">{{ m.saida or '' }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
+    </div>
   </div>
 </div>
 

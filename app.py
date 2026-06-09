@@ -455,9 +455,6 @@ def _admin_panel():
         num_rows="dynamic",
     )
 
-    # Persiste o estado atual do editor sem reconstruir do zero
-    st.session_state.membros_df_ss = edited_df
-
     # Sincroniza para membros_editados (preserva Carro/Saída que não aparecem na tabela)
     _prev_membros = {
         m["nome"]: m
