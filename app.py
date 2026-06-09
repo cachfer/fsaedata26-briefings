@@ -85,7 +85,7 @@ h1, h2, h3 {
 def _show_public_briefing(file_id: str):
     """Renderiza um briefing publicado a partir do Drive."""
     from services.drive_service import load_briefing
-    from utils.renderer import render_html, render_pdf
+    from utils.renderer import render_html
 
     with st.spinner("Carregando briefing..."):
         data = load_briefing(file_id)
@@ -94,7 +94,6 @@ def _show_public_briefing(file_id: str):
         st.error("Briefing não encontrado.")
         return
 
-    # Reconverte data string para objeto date se necessário
     if isinstance(data.get("data"), str):
         try:
             data["data"] = date.fromisoformat(data["data"])
@@ -106,16 +105,13 @@ def _show_public_briefing(file_id: str):
 
     col1, col2, col3 = st.columns([3, 1, 3])
     with col2:
-        if st.button("⬇ Exportar para impressão", type="primary"):
-            with st.spinner("Gerando arquivo..."):
-                html = render_pdf(data)
-            num = str(data.get("numero", "XX")).zfill(2)
-            st.download_button(
-                label="📄 Baixar HTML (abra e imprima como PDF)",
-                data=html,
-                file_name=f"briefing_T{num}_{data.get('data', '')}.html",
-                mime="text/html",
-            )
+        num = str(data.get("numero", "XX")).zfill(2)
+        st.download_button(
+            label="📄 Baixar para impressão (HTML)",
+            data=html.encode("utf-8"),
+            file_name=f"briefing_T{num}_{data.get('data', '')}.html",
+            mime="text/html",
+        )
 
 
 def _show_historico():
@@ -215,7 +211,6 @@ def _admin_panel():
         st.session_state.secoes_geradas = None
         st.session_state.tracados_selecionados = []
         st.session_state.data_selecionada = None
-        st.session_state.publish_pdf_bytes = None
         st.session_state.publish_html_bytes = None
 
     st.divider()
@@ -264,7 +259,6 @@ def _admin_panel():
             st.session_state.cronograma_editado = None
             st.session_state.secoes_geradas = None
             st.session_state.tracados_selecionados = []
-            st.session_state.publish_pdf_bytes = None
             st.session_state.publish_html_bytes = None
 
         if st.button("📥 Carregar dados do Notion", type="primary"):
@@ -321,7 +315,6 @@ def _admin_panel():
             st.session_state.cronograma_editado = None
             st.session_state.secoes_geradas = None
             st.session_state.tracados_selecionados = []
-            st.session_state.publish_pdf_bytes = None
             st.session_state.publish_html_bytes = None
 
         if not st.session_state.get("briefing_data"):
@@ -421,28 +414,21 @@ def _admin_panel():
         {
             "Nome": m["nome"],
             "Subgrupo": m["subgrupo"],
-            "Carro": "Sim" if m.get("tem_carro") else "Não",
             "Tarefa Box": m.get("tarefa_box", ""),
             "Tarefa Pista": m.get("tarefa_pista", ""),
             "Chegada": m.get("chegada", ""),
-            "Saída": m.get("saida", ""),
         }
         for m in st.session_state.membros_editados
     ])
 
-    st.caption("← Deslize a tabela para ver todas as colunas →")
     edited_df = st.data_editor(
         membros_df,
         use_container_width=True,
         num_rows="dynamic",
-        column_config={
-            "Carro": st.column_config.SelectboxColumn(options=["Sim", "Não"]),
-        },
         key="membros_editor",
     )
 
     def _is_piloto(nome_membro: str, pilotos: list[str]) -> bool:
-        """Verifica se um membro é piloto por correspondência parcial de nome."""
         if not nome_membro:
             return False
         nome_lower = nome_membro.lower()
@@ -450,22 +436,26 @@ def _admin_panel():
             p_lower = p.lower()
             if p_lower in nome_lower or nome_lower in p_lower:
                 return True
-            # Verifica se alguma palavra do nome do piloto está no nome do membro
             for palavra in p_lower.split():
                 if len(palavra) > 3 and palavra in nome_lower:
                     return True
         return False
 
-    # Sincroniza edições
+    # Preserva Carro/Saída (campos ocultos) ao sincronizar edições
+    _prev_membros = {
+        m["nome"]: m
+        for m in st.session_state.membros_editados
+        if m.get("nome")
+    }
     st.session_state.membros_editados = [
         {
             "nome": row["Nome"],
             "subgrupo": row["Subgrupo"],
-            "tem_carro": row["Carro"] == "Sim",
+            "tem_carro": _prev_membros.get(row["Nome"] or "", {}).get("tem_carro", False),
             "tarefa_box": row["Tarefa Box"],
             "tarefa_pista": row["Tarefa Pista"],
             "chegada": row["Chegada"],
-            "saida": row["Saída"],
+            "saida": _prev_membros.get(row["Nome"] or "", {}).get("saida", ""),
             "piloto": _is_piloto(row["Nome"], bd.get("pilotos", [])),
         }
         for _, row in edited_df.iterrows()
@@ -652,28 +642,20 @@ def _admin_panel():
 
     if publish_btn:
         full = _build_full_briefing()
-        from utils.renderer import render_html, render_pdf
+        from utils.renderer import render_html
         num = str(full.get("numero", "XX")).zfill(2)
-        with st.spinner("Gerando arquivos..."):
-            st.session_state.publish_pdf_bytes = render_pdf(full)
+        with st.spinner("Gerando briefing..."):
             st.session_state.publish_html_bytes = render_html(full).encode("utf-8")
             st.session_state.publish_num = num
             st.session_state.publish_data = str(data_escolhida)
         st.success("Briefing gerado!")
 
-    if st.session_state.get("publish_pdf_bytes"):
+    if st.session_state.get("publish_html_bytes"):
         num_pub = st.session_state.publish_num
         data_pub = st.session_state.publish_data
-        st.markdown("Baixe o arquivo, faça upload manual no Drive e compartilhe o link no grupo.")
+        st.markdown("Baixe o arquivo, abra no navegador e use **Ctrl+P** (ou menu de compartilhamento no celular) para imprimir como PDF.")
         st.download_button(
-            label="⬇ Baixar PDF do briefing",
-            data=st.session_state.publish_pdf_bytes,
-            file_name=f"briefing_T{num_pub}_{data_pub}.pdf",
-            mime="application/pdf",
-            use_container_width=True,
-        )
-        st.download_button(
-            label="⬇ Baixar HTML do briefing",
+            label="⬇ Baixar briefing",
             data=st.session_state.publish_html_bytes,
             file_name=f"briefing_T{num_pub}_{data_pub}.html",
             mime="text/html",
