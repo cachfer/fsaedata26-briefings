@@ -207,6 +207,8 @@ def _admin_panel():
         st.session_state.briefing_data = None
         st.session_state.membros_raw = []
         st.session_state.membros_editados = None
+        st.session_state.membros_df_ss = None
+        st.session_state.membros_df_dirty = True
         st.session_state.cronograma_editado = None
         st.session_state.secoes_geradas = None
         st.session_state.tracados_selecionados = []
@@ -256,6 +258,8 @@ def _admin_panel():
             st.session_state.briefing_data = None
             st.session_state.membros_raw = []
             st.session_state.membros_editados = None
+        st.session_state.membros_df_ss = None
+        st.session_state.membros_df_dirty = True
             st.session_state.cronograma_editado = None
             st.session_state.secoes_geradas = None
             st.session_state.tracados_selecionados = []
@@ -283,6 +287,8 @@ def _admin_panel():
             st.session_state.briefing_data = {**teste, "validacoes": validacoes}
             st.session_state.membros_raw = membros
             st.session_state.membros_editados = None
+        st.session_state.membros_df_ss = None
+        st.session_state.membros_df_dirty = True
             st.session_state.cronograma_editado = None
             st.session_state.secoes_geradas = None
             st.success(
@@ -312,6 +318,8 @@ def _admin_panel():
             }
             st.session_state.membros_raw = []
             st.session_state.membros_editados = None
+        st.session_state.membros_df_ss = None
+        st.session_state.membros_df_dirty = True
             st.session_state.cronograma_editado = None
             st.session_state.secoes_geradas = None
             st.session_state.tracados_selecionados = []
@@ -384,6 +392,7 @@ def _admin_panel():
                         membros = get_membros_confirmados(local_atual, data_escolhida)
                         st.session_state.membros_raw = membros
                         st.session_state.membros_editados = [m.copy() for m in membros]
+                        st.session_state.membros_df_dirty = True
                         if membros:
                             st.success(f"✅ {len(membros)} membros confirmados carregados.")
                         else:
@@ -402,6 +411,7 @@ def _admin_panel():
                     circuito=bd["circuito"],
                 )
                 st.session_state.membros_editados = membros_alocados
+                st.session_state.membros_df_dirty = True
                 st.success("Sugestão gerada! Edite a tabela abaixo conforme necessário.")
                 st.rerun()
             except Exception as e:
@@ -409,27 +419,10 @@ def _admin_panel():
 
     if st.session_state.membros_editados is None:
         st.session_state.membros_editados = [m.copy() for m in membros_raw]
+        st.session_state.membros_df_dirty = True
 
-    membros_df = pd.DataFrame([
-        {
-            "Nome": m["nome"],
-            "Subgrupo": m["subgrupo"],
-            "Tarefa Box": m.get("tarefa_box", ""),
-            "Tarefa Pista": m.get("tarefa_pista", ""),
-            "Chegada": m.get("chegada", ""),
-        }
-        for m in st.session_state.membros_editados
-    ])
-
-    edited_df = st.data_editor(
-        membros_df,
-        use_container_width=True,
-        num_rows="dynamic",
-        key="membros_editor",
-    )
-
-    def _is_piloto(nome_membro: str, pilotos: list[str]) -> bool:
-        if not nome_membro:
+    def _is_piloto(nome_membro, pilotos: list[str]) -> bool:
+        if not nome_membro or not isinstance(nome_membro, str):
             return False
         nome_lower = nome_membro.lower()
         for p in pilotos:
@@ -441,21 +434,48 @@ def _admin_panel():
                     return True
         return False
 
-    # Preserva Carro/Saída (campos ocultos) ao sincronizar edições
+    # Reconstrói o DataFrame base só quando os dados mudam (Notion/IA),
+    # não em cada rerun — isso evita conflito com o estado interno do editor
+    if st.session_state.get("membros_df_dirty", True) or st.session_state.get("membros_df_ss") is None:
+        st.session_state.membros_df_ss = pd.DataFrame([
+            {
+                "Nome": m.get("nome") or "",
+                "Subgrupo": m.get("subgrupo") or "",
+                "Tarefa Box": m.get("tarefa_box") or "",
+                "Tarefa Pista": m.get("tarefa_pista") or "",
+                "Chegada": m.get("chegada") or "",
+            }
+            for m in st.session_state.membros_editados
+        ])
+        st.session_state.membros_df_dirty = False
+
+    edited_df = st.data_editor(
+        st.session_state.membros_df_ss,
+        use_container_width=True,
+        num_rows="dynamic",
+    )
+
+    # Persiste o estado atual do editor sem reconstruir do zero
+    st.session_state.membros_df_ss = edited_df
+
+    # Sincroniza para membros_editados (preserva Carro/Saída que não aparecem na tabela)
     _prev_membros = {
         m["nome"]: m
         for m in st.session_state.membros_editados
         if m.get("nome")
     }
+    def _str(val) -> str:
+        return val if isinstance(val, str) else ""
+
     st.session_state.membros_editados = [
         {
-            "nome": row["Nome"],
-            "subgrupo": row["Subgrupo"],
-            "tem_carro": _prev_membros.get(row["Nome"] or "", {}).get("tem_carro", False),
-            "tarefa_box": row["Tarefa Box"],
-            "tarefa_pista": row["Tarefa Pista"],
-            "chegada": row["Chegada"],
-            "saida": _prev_membros.get(row["Nome"] or "", {}).get("saida", ""),
+            "nome": _str(row["Nome"]),
+            "subgrupo": _str(row["Subgrupo"]),
+            "tem_carro": _prev_membros.get(_str(row["Nome"]), {}).get("tem_carro", False),
+            "tarefa_box": _str(row["Tarefa Box"]),
+            "tarefa_pista": _str(row["Tarefa Pista"]),
+            "chegada": _str(row["Chegada"]),
+            "saida": _prev_membros.get(_str(row["Nome"]), {}).get("saida", ""),
             "piloto": _is_piloto(row["Nome"], bd.get("pilotos", [])),
         }
         for _, row in edited_df.iterrows()
