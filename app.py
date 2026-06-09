@@ -258,8 +258,8 @@ def _admin_panel():
             st.session_state.briefing_data = None
             st.session_state.membros_raw = []
             st.session_state.membros_editados = None
-        st.session_state.membros_df_ss = None
-        st.session_state.membros_df_dirty = True
+            st.session_state.membros_df_ss = None
+            st.session_state.membros_df_dirty = True
             st.session_state.cronograma_editado = None
             st.session_state.secoes_geradas = None
             st.session_state.tracados_selecionados = []
@@ -287,8 +287,8 @@ def _admin_panel():
             st.session_state.briefing_data = {**teste, "validacoes": validacoes}
             st.session_state.membros_raw = membros
             st.session_state.membros_editados = None
-        st.session_state.membros_df_ss = None
-        st.session_state.membros_df_dirty = True
+            st.session_state.membros_df_ss = None
+            st.session_state.membros_df_dirty = True
             st.session_state.cronograma_editado = None
             st.session_state.secoes_geradas = None
             st.success(
@@ -318,8 +318,8 @@ def _admin_panel():
             }
             st.session_state.membros_raw = []
             st.session_state.membros_editados = None
-        st.session_state.membros_df_ss = None
-        st.session_state.membros_df_dirty = True
+            st.session_state.membros_df_ss = None
+            st.session_state.membros_df_dirty = True
             st.session_state.cronograma_editado = None
             st.session_state.secoes_geradas = None
             st.session_state.tracados_selecionados = []
