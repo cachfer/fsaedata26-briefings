@@ -201,36 +201,38 @@ def get_membros_confirmados(local: str, data: date) -> list[dict]:
     """
     Retorna membros que confirmaram presença no formulário
     correspondente ao local e data do teste.
-    Filtra preenchimentos entre domingo anterior e o dia do teste.
+    Busca todos os registros até o final do dia do teste e usa
+    deduplicação por nome para manter apenas o preenchimento mais recente.
     """
     db_id = _get_comparecimento_db_id(local, data)
     if not db_id:
         return []
 
-    # Janela: de domingo da semana do teste até o dia do teste
-    dias_desde_domingo = (data.weekday() + 1) % 7
-    domingo = data - timedelta(days=dias_desde_domingo)
+    # Limite superior: início do dia seguinte (inclui o dia do teste inteiro)
+    limite = (data + timedelta(days=1)).isoformat()
 
-    # Busca sem ordenar por campo específico — usa created_time depois
-    try:
-        results = notion.databases.query(
-            database_id=db_id,
-            filter={
-                "and": [
-                    {
-                        "timestamp": "created_time",
-                        "created_time": {"on_or_after": domingo.isoformat()},
-                    },
-                    {
-                        "timestamp": "created_time",
-                        "created_time": {"on_or_before": data.isoformat()},
-                    },
-                ]
-            },
-        )["results"]
-    except Exception:
-        # Fallback sem filtro de data se a API não suportar
-        results = notion.databases.query(database_id=db_id)["results"]
+    results = []
+    cursor = None
+    while True:
+        try:
+            kwargs = {
+                "database_id": db_id,
+                "filter": {
+                    "timestamp": "created_time",
+                    "created_time": {"before": limite},
+                },
+                "page_size": 100,
+            }
+            if cursor:
+                kwargs["start_cursor"] = cursor
+            resp = notion.databases.query(**kwargs)
+        except Exception:
+            # Fallback sem filtro se a API não suportar
+            resp = notion.databases.query(database_id=db_id, page_size=100)
+        results.extend(resp["results"])
+        if not resp.get("has_more"):
+            break
+        cursor = resp.get("next_cursor")
 
     membros = []
     nomes_vistos = set()
