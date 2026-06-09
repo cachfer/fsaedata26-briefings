@@ -187,10 +187,6 @@ def _show_admin():
 
 def _admin_panel():
     """Painel principal do admin."""
-    from services.notion_service import (
-        get_test_dates, get_test_by_date,
-        get_validacoes_do_teste, get_membros_confirmados,
-    )
     from services.drive_service import list_tracados, download_tracado
     from services.ai_service import suggest_task_allocation, generate_briefing_sections, generate_schedule
 
@@ -208,83 +204,143 @@ def _admin_panel():
 
     st.divider()
 
-    # ── 1. Seleção de data ───────────────────────────────────────────────────
-    st.markdown("### 1. Selecione a data do teste")
-
-    with st.spinner("Buscando testes no Notion..."):
-        try:
-            datas = get_test_dates()
-        except Exception as e:
-            st.error(f"Erro ao conectar ao Notion: {e}")
-            st.info("Verifique NOTION_TOKEN e NOTION_TESTES_DB_ID nos secrets.")
-            return
-
-    if not datas:
-        st.warning("Nenhum teste encontrado no Notion.")
-        return
-
-    from datetime import date as date_type
-    hoje = date_type.today()
-    # Pré-seleciona hoje se houver teste, senão a data mais próxima futura
-    default_date = hoje if hoje in datas else min((d for d in datas if d >= hoje), default=datas[-1])
-    data_escolhida = st.date_input(
-        "Data do teste",
-        value=default_date,
-        min_value=min(datas),
-        max_value=max(datas),
-        format="DD/MM/YYYY",
-    )
-    if data_escolhida not in datas:
-        st.warning("Não há teste cadastrado no Notion para esta data.")
-        return
-
-    # Reset de estado ao trocar de data
-    if st.session_state.get("data_selecionada") != data_escolhida:
-        st.session_state.data_selecionada = data_escolhida
+    # ── Modo de entrada ──────────────────────────────────────────────────────
+    modo = st.radio("Fonte de dados", ["Notion", "Manual"], horizontal=True, key="modo_fonte")
+    if st.session_state.get("_ultimo_modo") != modo:
+        st.session_state._ultimo_modo = modo
         st.session_state.briefing_data = None
         st.session_state.membros_raw = []
         st.session_state.membros_editados = None
         st.session_state.cronograma_editado = None
         st.session_state.secoes_geradas = None
         st.session_state.tracados_selecionados = []
+        st.session_state.data_selecionada = None
+        st.session_state.publish_pdf_bytes = None
+        st.session_state.publish_html_bytes = None
 
-    if st.button("📥 Carregar dados do Notion", type="primary"):
-        with st.spinner("Carregando dados..."):
+    st.divider()
+
+    # ── 1. Seleção de data / carregamento ────────────────────────────────────
+    st.markdown("### 1. Selecione a data do teste")
+
+    from datetime import date as date_type
+    hoje = date_type.today()
+
+    if modo == "Notion":
+        from services.notion_service import (
+            get_test_dates, get_test_by_date,
+            get_validacoes_do_teste, get_membros_confirmados,
+        )
+
+        with st.spinner("Buscando testes no Notion..."):
             try:
-                st.caption("1/3 Buscando teste selecionado no Notion...")
-                teste = get_test_by_date(data_escolhida)
-                if not teste:
-                    st.error("Teste não encontrado para esta data no Notion.")
+                datas = get_test_dates()
+            except Exception as e:
+                st.error(f"Erro ao conectar ao Notion: {e}")
+                st.info("Verifique NOTION_TOKEN e NOTION_TESTES_DB_ID nos secrets.")
+                return
+
+        if not datas:
+            st.warning("Nenhum teste encontrado no Notion.")
+            return
+
+        default_date = hoje if hoje in datas else min((d for d in datas if d >= hoje), default=datas[-1])
+        data_escolhida = st.date_input(
+            "Data do teste",
+            value=default_date,
+            min_value=min(datas),
+            max_value=max(datas),
+            format="DD/MM/YYYY",
+        )
+        if data_escolhida not in datas:
+            st.warning("Não há teste cadastrado no Notion para esta data.")
+            return
+
+        if st.session_state.get("data_selecionada") != data_escolhida:
+            st.session_state.data_selecionada = data_escolhida
+            st.session_state.briefing_data = None
+            st.session_state.membros_raw = []
+            st.session_state.membros_editados = None
+            st.session_state.cronograma_editado = None
+            st.session_state.secoes_geradas = None
+            st.session_state.tracados_selecionados = []
+            st.session_state.publish_pdf_bytes = None
+            st.session_state.publish_html_bytes = None
+
+        if st.button("📥 Carregar dados do Notion", type="primary"):
+            with st.spinner("Carregando dados..."):
+                try:
+                    st.caption("1/3 Buscando teste selecionado no Notion...")
+                    teste = get_test_by_date(data_escolhida)
+                    if not teste:
+                        st.error("Teste não encontrado para esta data no Notion.")
+                        st.stop()
+
+                    st.caption("2/3 Carregando validações da metodologia...")
+                    validacoes = get_validacoes_do_teste(teste.get("validacao_ids", []))
+
+                    st.caption("3/3 Carregando membros confirmados...")
+                    membros = get_membros_confirmados(teste.get("local", ""), data_escolhida)
+                except Exception as e:
+                    st.error(f"Erro ao carregar dados do Notion: {e}")
+                    st.info("Se isso acontece para todo mundo, confira o token do Notion, os IDs dos databases e o nome das colunas usadas nas queries.")
                     st.stop()
 
-                st.caption("2/3 Carregando validações da metodologia...")
-                validacoes = get_validacoes_do_teste(teste.get("validacao_ids", []))
+            st.session_state.briefing_data = {**teste, "validacoes": validacoes}
+            st.session_state.membros_raw = membros
+            st.session_state.membros_editados = None
+            st.session_state.cronograma_editado = None
+            st.session_state.secoes_geradas = None
+            st.success(
+                f"✅ Teste #{teste['numero']} carregado — "
+                f"{len(membros)} membros confirmados, {len(validacoes)} validações."
+            )
+            st.rerun()
 
-                st.caption("3/3 Carregando membros confirmados...")
-                membros = get_membros_confirmados(teste.get("local", ""), data_escolhida)
-            except Exception as e:
-                st.error(f"Erro ao carregar dados do Notion: {e}")
-                st.info("Se isso acontece para todo mundo, confira o token do Notion, os IDs dos databases e o nome das colunas usadas nas queries.")
-                st.stop()
-
-        st.session_state.briefing_data = {**teste, "validacoes": validacoes}
-        st.session_state.membros_raw = membros
-        st.session_state.membros_editados = None
-        st.session_state.cronograma_editado = None
-        st.session_state.secoes_geradas = None
-        st.success(
-            f"✅ Teste #{teste['numero']} carregado — "
-            f"{len(membros)} membros confirmados, {len(validacoes)} validações."
+    else:  # Manual
+        data_escolhida = st.date_input(
+            "Data do teste",
+            value=st.session_state.get("data_selecionada") or hoje,
+            format="DD/MM/YYYY",
         )
-        st.rerun()
 
+        if st.session_state.get("data_selecionada") != data_escolhida:
+            st.session_state.data_selecionada = data_escolhida
+            st.session_state.briefing_data = {
+                "numero": "",
+                "local": "",
+                "responsavel": "Carolina Ferrari",
+                "circuito": "",
+                "objetivos_capa": "",
+                "pilotos": [],
+                "validacoes": [],
+                "data": data_escolhida,
+            }
+            st.session_state.membros_raw = []
+            st.session_state.membros_editados = None
+            st.session_state.cronograma_editado = None
+            st.session_state.secoes_geradas = None
+            st.session_state.tracados_selecionados = []
+            st.session_state.publish_pdf_bytes = None
+            st.session_state.publish_html_bytes = None
 
+        if not st.session_state.get("briefing_data"):
+            st.session_state.briefing_data = {
+                "numero": "",
+                "local": "",
+                "responsavel": "Carolina Ferrari",
+                "circuito": "",
+                "objetivos_capa": "",
+                "pilotos": [],
+                "validacoes": [],
+                "data": data_escolhida,
+            }
 
     if not st.session_state.get("briefing_data"):
         return
 
     bd = st.session_state.briefing_data
-    validacoes = bd["validacoes"]
+    validacoes = bd.get("validacoes", [])
 
     # ── 2. Informações gerais ────────────────────────────────────────────────
     st.divider()
@@ -311,7 +367,7 @@ def _admin_panel():
     # ── 3. Pilotos ───────────────────────────────────────────────────────────
     st.divider()
     st.markdown("### 3. Pilotos")
-    membros_raw = st.session_state.membros_raw
+    membros_raw = st.session_state.get("membros_raw", [])
     PILOTOS_FIXOS = ["João Gabriel", "Gustavo Fornazier", "Milione", "Juan", "Raphael"]
     bd["pilotos"] = st.multiselect(
         "Selecione os pilotos do dia",
@@ -322,6 +378,23 @@ def _admin_panel():
     # ── 4. Divisão de tarefas ────────────────────────────────────────────────
     st.divider()
     st.markdown("### 4. Divisão de tarefas")
+
+    if modo == "Manual":
+        from services.notion_service import get_membros_confirmados
+        if st.button("📥 Carregar membros do Notion", type="secondary"):
+            local_atual = bd.get("local", "")
+            if not local_atual:
+                st.warning("Preencha o local na seção 2 antes de carregar os membros.")
+            else:
+                with st.spinner("Carregando membros..."):
+                    try:
+                        membros = get_membros_confirmados(local_atual, data_escolhida)
+                        st.session_state.membros_raw = membros
+                        st.session_state.membros_editados = None
+                        st.success(f"✅ {len(membros)} membros confirmados carregados.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro ao carregar membros do Notion: {e}")
 
     if st.button("🤖 Gerar sugestão de alocação com IA"):
         with st.spinner("A IA está alocando tarefas..."):
@@ -403,7 +476,11 @@ def _admin_panel():
         st.rerun()
 
     if st.session_state.cronograma_editado is None:
-        st.session_state.cronograma_editado = generate_schedule(bd["local"], validacoes, num_pilotos)
+        if modo == "Notion" or bd.get("local"):
+            st.session_state.cronograma_editado = generate_schedule(bd["local"], validacoes, num_pilotos)
+        else:
+            st.session_state.cronograma_editado = [{"atividade": "", "horario": "", "comentario": ""}]
+            st.caption("Preencha o local na seção 2 e clique em 'Gerar cronograma automático'.")
 
     crono_df = pd.DataFrame(st.session_state.cronograma_editado)
     edited_crono = st.data_editor(
@@ -418,26 +495,32 @@ def _admin_panel():
     st.divider()
     st.markdown("### 6. Seções textuais")
 
-    if st.button("✍️ Gerar seções com IA (objetivos / revisão teórica / procedimento)"):
-        with st.spinner("Gerando conteúdo com IA..."):
-            try:
-                secoes = generate_briefing_sections(validacoes)
-                st.session_state.secoes_geradas = secoes
-                st.rerun()
-            except Exception as e:
-                st.error(f"Erro na IA de seções: {e}")
-
     s = st.session_state.secoes_geradas or {}
-    bd["o_que_buscamos"] = st.text_area(
-        "O que buscamos atingir",
-        value=bd.get("o_que_buscamos") or s.get("o_que_buscamos", ""),
-        height=200,
-    )
-    bd["entenda_o_teste"] = st.text_area(
-        "Entenda o teste",
-        value=bd.get("entenda_o_teste") or s.get("entenda_o_teste", ""),
-        height=200,
-    )
+
+    if modo == "Notion":
+        if st.button("✍️ Gerar seções com IA (objetivos / revisão teórica / procedimento)"):
+            with st.spinner("Gerando conteúdo com IA..."):
+                try:
+                    secoes = generate_briefing_sections(validacoes)
+                    st.session_state.secoes_geradas = secoes
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erro na IA de seções: {e}")
+
+        bd["o_que_buscamos"] = st.text_area(
+            "O que buscamos atingir",
+            value=bd.get("o_que_buscamos") or s.get("o_que_buscamos", ""),
+            height=200,
+        )
+        bd["entenda_o_teste"] = st.text_area(
+            "Entenda o teste",
+            value=bd.get("entenda_o_teste") or s.get("entenda_o_teste", ""),
+            height=200,
+        )
+    else:
+        bd["o_que_buscamos"] = ""
+        bd["entenda_o_teste"] = ""
+
     bd["procedimento"] = st.text_area(
         "Procedimento em pista",
         value=bd.get("procedimento") or s.get("procedimento", ""),
@@ -579,36 +662,42 @@ def _admin_panel():
             from utils.renderer import render_html, render_pdf
             num = str(full.get("numero", "XX")).zfill(2)
 
-            with st.spinner("Gerando PDF local..."):
-                pdf_bytes = render_pdf(full)
-                html_text = render_html(full)
+            with st.spinner("Gerando arquivos..."):
+                st.session_state.publish_pdf_bytes = render_pdf(full)
+                st.session_state.publish_html_bytes = render_html(full).encode("utf-8")
+                st.session_state.publish_num = num
+                st.session_state.publish_data = str(data_escolhida)
 
-            st.success("Briefing gerado localmente.")
-            st.markdown("Baixe o PDF abaixo, faça upload manual no Drive e compartilhe o link do arquivo no grupo.")
-            st.download_button(
-                label="⬇ Baixar PDF do briefing",
-                data=pdf_bytes,
-                file_name=f"briefing_T{num}_{data_escolhida}.pdf",
-                mime="application/pdf",
-            )
+            st.success("Briefing gerado!")
 
-            st.download_button(
-                label="⬇ Baixar HTML do briefing",
-                data=html_text.encode("utf-8"),
-                file_name=f"briefing_T{num}_{data_escolhida}.html",
-                mime="text/html",
-            )
-
-            manual_link = st.text_input(
-                "Link do Drive após upload manual",
-                value=st.session_state.get("manual_drive_link", ""),
-                placeholder="Cole aqui o link do arquivo no Drive",
-            )
-            if manual_link:
-                st.session_state.manual_drive_link = manual_link
-                st.markdown("**Link para compartilhar no grupo:**")
-                st.code(manual_link)
-                st.markdown(f"[Abrir briefing ↗]({manual_link})")
+    if st.session_state.get("publish_pdf_bytes"):
+        num_pub = st.session_state.publish_num
+        data_pub = st.session_state.publish_data
+        st.markdown("Baixe o arquivo, faça upload manual no Drive e compartilhe o link no grupo.")
+        st.download_button(
+            label="⬇ Baixar PDF do briefing",
+            data=st.session_state.publish_pdf_bytes,
+            file_name=f"briefing_T{num_pub}_{data_pub}.pdf",
+            mime="application/pdf",
+            use_container_width=True,
+        )
+        st.download_button(
+            label="⬇ Baixar HTML do briefing",
+            data=st.session_state.publish_html_bytes,
+            file_name=f"briefing_T{num_pub}_{data_pub}.html",
+            mime="text/html",
+            use_container_width=True,
+        )
+        manual_link = st.text_input(
+            "Link do Drive após upload manual",
+            value=st.session_state.get("manual_drive_link", ""),
+            placeholder="Cole aqui o link do arquivo no Drive",
+        )
+        if manual_link:
+            st.session_state.manual_drive_link = manual_link
+            st.markdown("**Link para compartilhar no grupo:**")
+            st.code(manual_link)
+            st.markdown(f"[Abrir briefing ↗]({manual_link})")
 
 
 # ════════════════════════════════════════════════════════════════════════════
